@@ -463,13 +463,13 @@
 
 /* Aviso con tooltip (tarjetas KPI) */
 .stat-label {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .warn-tip {
-  position: relative;
   display: inline-flex;
   cursor: help;
   color: var(--warning);
@@ -486,10 +486,11 @@
 .warn-tip-text {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  right: 0;
   z-index: 5;
   display: none;
   width: 240px;
+  max-width: 100%;
   padding: 8px 10px;
   font-size: 13px;
   font-weight: 400;
