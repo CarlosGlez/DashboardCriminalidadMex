@@ -1,4 +1,5 @@
 import { fmtNumber, fmtDecimal } from '../utils/format'
+import type { ReactNode } from 'react'
 import type { CrimeSummary, Filters } from '../types'
 import { MESES } from '../constants'
 import {
@@ -10,6 +11,7 @@ interface Props {
   summary: CrimeSummary
   filters: Filters
   coverage: CoverageMap
+  anioMin: number
 }
 
 
@@ -51,6 +53,12 @@ function ownScopeGrowth(trend: CrimeSummary['trend'], desdeAnio = 0) {
   const pct = ((totalLast - totalFirst) / totalFirst) * 100
   const omitidoDesde = trend.some((p) => p.anio < firstYear) ? firstYear : null
   return { firstYear, lastYear, totalFirst, totalLast, pct, omitidoDesde }
+}
+
+// Resalta en negritas las cifras clave de un texto: porcentajes, totales con separador de miles y tasas.
+const KEY_FIGURES = /([+-]?\d+(?:[.,]\d+)?%|\d{1,3}(?:,\d{3})+(?!\s+habitantes)|\d+(?:\.\d+)?(?= por cada 100,000))/g
+function emphasize(text: string): ReactNode[] {
+  return text.split(KEY_FIGURES).map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : part))
 }
 
 interface ActionItem {
@@ -143,7 +151,7 @@ function buildActionPlan(
   return { headline, secondary }
 }
 
-export function Insights({ summary: rawSummary, filters, coverage }: Props) {
+export function Insights({ summary: rawSummary, filters, coverage, anioMin }: Props) {
   // Cobertura de datos (data_coverage): entidad_growth y tipo_growth comparan solo el primer y el
   // último año del rango. Si uno de esos años es anómalo para un estado (p. ej. Oaxaca 2015 → +378%),
   // el crecimiento sale distorsionado, así que esos estados se excluyen del ranking de estados.
@@ -163,7 +171,7 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
   // Notas: crecimiento por tipo (extremos del rango), variación vs periodo anterior (rango + anterior)
   // y tasa por 100k (promedio del rango: un año anómalo la distorsiona y con ella el lugar en el ranking)
   const afectaTipo = enAlcance.some((c) => tocaExtremos(c, anioDesde, anioHasta))
-  const hayPrevio = rawSummary.prev_total > 0 // sin datos previos no hay variación que distorsionar
+  const hayPrevio = prevDesde >= anioMin && rawSummary.prev_total > 0 // misma regla que la tarjeta de variación: periodo anterior completo
   const afectaVariacion = hayPrevio && enAlcance.some((c) => aniosAnomalosEn(c, prevDesde, anioHasta).length > 0)
   const afectaTasa =
     rawSummary.tasa_by_entidad.length > 0 &&
@@ -196,20 +204,20 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
         <li>
           {topGrowthTipo ? (
             <>
-              <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de {fmtNumber(topGrowthTipo.total_desde)} a {fmtNumber(topGrowthTipo.total_hasta)} casos ({topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%).
+              <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de <strong>{fmtNumber(topGrowthTipo.total_desde)}</strong> a <strong>{fmtNumber(topGrowthTipo.total_hasta)}</strong> casos (<strong>{topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%</strong>).
             </>
           ) : (
             'No se identificó un crecimiento sostenido por tipo de delito en el rango seleccionado.'
           )}
         </li>
         <li>
-          Se observa estacionalidad: cada año, <strong>{peakMonth.toLowerCase()}</strong> concentra en promedio {liftPct.toFixed(0)}% más casos que el resto del año (patrón histórico {filters.anioDesde}-{filters.anioHasta}, se repite todos los años, no un pico puntual ya ocurrido).
+          Se observa estacionalidad: cada año, <strong>{peakMonth.toLowerCase()}</strong> concentra en promedio <strong>{liftPct.toFixed(0)}%</strong> más casos que el resto del año (patrón histórico {filters.anioDesde}-{filters.anioHasta}, se repite todos los años, no un pico puntual ya ocurrido).
         </li>
         {!filters.entidad && (
           <li>
             {topGrowthEntidad ? (
               <>
-                <strong>{topGrowthEntidad.entidad}</strong> es el estado que más incrementó su incidencia delictiva ({topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}{topGrowthEntidad.growth_pct}%), de {fmtNumber(topGrowthEntidad.total_desde)} a {fmtNumber(topGrowthEntidad.total_hasta)} casos.
+                <strong>{topGrowthEntidad.entidad}</strong> es el estado que más incrementó su incidencia delictiva (<strong>{topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}{topGrowthEntidad.growth_pct}%</strong>), de <strong>{fmtNumber(topGrowthEntidad.total_desde)}</strong> a <strong>{fmtNumber(topGrowthEntidad.total_hasta)}</strong> casos.
               </>
             ) : (
               'No se identificó un incremento sostenido por estado en el rango seleccionado.'
@@ -218,7 +226,7 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
         )}
         {!filters.entidad && topTasaEntidad && (
           <li>
-            Ajustando por población, <strong>{topTasaEntidad.entidad}</strong> tiene la mayor tasa de incidencia del país: {fmtDecimal(topTasaEntidad.tasa!)} delitos por cada 100,000 habitantes al año — un panorama distinto al de volumen bruto, donde dominan los estados más poblados.
+            Ajustando por población, <strong>{topTasaEntidad.entidad}</strong> tiene la mayor tasa de incidencia del país: <strong>{fmtDecimal(topTasaEntidad.tasa!)}</strong> delitos por cada 100,000 habitantes al año — un panorama distinto al de volumen bruto, donde dominan los estados más poblados.
           </li>
         )}
         {excluidos.length > 0 && (
@@ -236,12 +244,12 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
 
       <div className="action-plan">
         <h4>Plan de acción recomendado</h4>
-        <p className="action-plan-headline">{headline.body}</p>
+        <p className="action-plan-headline">{emphasize(headline.body)}</p>
         {secondary.length > 0 && (
           <ol>
             {secondary.map((item) => (
               <li key={item.title}>
-                <strong>{item.title}.</strong> {item.body}
+                <strong>{item.title}.</strong> {emphasize(item.body)}
               </li>
             ))}
           </ol>

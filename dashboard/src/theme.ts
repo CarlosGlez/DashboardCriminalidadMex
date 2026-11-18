@@ -15,6 +15,9 @@ function readPalette() {
     baseline: cssVar('--border'),
     bar: cssVar('--bar'),
     barMuted: cssVar('--bar-muted'),
+    barSoft: cssVar('--bar-soft'),
+    barTop: cssVar('--bar-top'),
+    track: cssVar('--track'),
     accent: cssVar('--accent'),
     warning: cssVar('--warning'),
     noData: cssVar('--map-nodata'),
@@ -22,7 +25,7 @@ function readPalette() {
 }
 
 export function useChartColors() {
-  return useMemo(readPalette, [])
+  return useMemo(() => readPalette(), [])
 }
 
 // Rampa secuencial de 7 pasos para el mapa coroplético: de menos a más oscuro = más delitos.

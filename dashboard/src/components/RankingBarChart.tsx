@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import {
-  Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
-import { fmtNumber, fmtAxis } from '../utils/format'
+import { fmtNumber, fmtCompact } from '../utils/format'
 import { useChartColors } from '../theme'
 
 interface Row {
@@ -14,42 +14,81 @@ interface View {
   key: string
   label: string
   rows: Row[]
+  /** Formato del tooltip (por defecto número completo). */
   formatValue?: (v: number) => string
+  /** Formato del valor al final de la barra (por defecto k/M, ej. 7.1 M, 515k). */
+  formatLabel?: (v: number) => string
+  /** Nombre del valor en el tooltip (por defecto "Delitos"). */
+  valueLabel?: string
 }
 
 interface Props {
   title: string
   views: View[]
+  /** Etiqueta del elemento seleccionado en el filtro (se pinta en --accent). */
   highlight?: string
   /** Etiqueta de la barra que se pinta en gris (p. ej. "Otros"). */
   mutedLabel?: string
+  /** Ancho (px) reservado para las etiquetas del eje Y; define dónde se parte el nombre en varias líneas. */
+  labelWidth?: number
 }
 
-const MAX_LABEL_CHARS = 26
+const ROW_HEIGHT = 38
+const LINE_HEIGHT = 15
 
-// Etiqueta del eje Y: se trunca con "…" (nombre completo en tooltip nativo) para que nunca se encime.
-function CategoryTick({ x, y, payload, fill }: { x?: number; y?: number; payload?: { value: string }; fill: string }) {
-  const full = String(payload?.value ?? '')
-  const text = full.length > MAX_LABEL_CHARS ? `${full.slice(0, MAX_LABEL_CHARS - 1).trimEnd()}…` : full
+// Parte un nombre en líneas de a lo sumo `maxChars` caracteres, sin cortar palabras ni truncar.
+function wrapLabel(text: string, maxChars: number): string[] {
+  const lines: string[] = []
+  let current = ''
+  for (const word of text.split(' ')) {
+    if (current && `${current} ${word}`.length > maxChars) {
+      lines.push(current)
+      current = word
+    } else {
+      current = current ? `${current} ${word}` : word
+    }
+  }
+  if (current) lines.push(current)
+  return lines
+}
+
+interface TickProps {
+  x?: number
+  y?: number
+  index?: number
+  payload?: { value: string }
+  fill: string
+  maxChars: number
+}
+
+// Etiqueta del eje Y con el nombre completo (en varias líneas si hace falta); la primera, en negritas.
+function CategoryTick({ x, y, index, payload, fill, maxChars }: TickProps) {
+  const lines = wrapLabel(String(payload?.value ?? ''), maxChars)
+  const firstDy = 4 - ((lines.length - 1) * LINE_HEIGHT) / 2
   return (
-    <text x={x} y={y} dy={4} textAnchor="end" fill={fill} fontSize={12}>
-      <title>{full}</title>
-      {text}
+    <text x={x} y={y} textAnchor="end" fill={fill} fontSize={13} fontWeight={index === 0 ? 700 : 400}>
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? firstDy : LINE_HEIGHT}>
+          {line}
+        </tspan>
+      ))}
     </text>
   )
 }
 
 const defaultFormat = (v: number) => fmtNumber(v)
 
-export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) {
+export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidth = 170 }: Props) {
   const colors = useChartColors()
   const [activeKey, setActiveKey] = useState(views[0]?.key)
   const active = views.find((v) => v.key === activeKey) ?? views[0]
   const format = active?.formatValue ?? defaultFormat
-  const height = Math.max(180, (active?.rows.length ?? 0) * 32)
+  const formatLabel = active?.formatLabel ?? fmtCompact
+  const rows = active?.rows ?? []
+  const height = Math.max(180, rows.length * ROW_HEIGHT + 16)
 
   return (
-    <div className="chart-card">
+    <div className="chart-card chart-card--fill">
       <div className="chart-card-header">
         <h3>{title}</h3>
         {views.length > 1 && (
@@ -67,41 +106,50 @@ export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) 
           </div>
         )}
       </div>
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={active?.rows ?? []} layout="vertical" margin={{ top: 8, right: 24, bottom: 0, left: 8 }}>
-          <CartesianGrid stroke={colors.gridline} horizontal={false} />
-          <XAxis
-            type="number"
-            tick={{ fill: colors.muted, fontSize: 12 }}
-            axisLine={{ stroke: colors.baseline }}
-            tickLine={false}
-            tickFormatter={(v) => fmtAxis(Number(v))}
-          />
-          <YAxis
-            type="category"
-            dataKey="label"
-            tick={<CategoryTick fill={colors.textSecondary} />}
-            axisLine={false}
-            tickLine={false}
-            width={170}
-            interval={0}
-          />
-          <Tooltip
-            formatter={(value) => format(Number(value))}
-            contentStyle={{ background: colors.surface, border: `1px solid ${colors.gridline}`, color: colors.textPrimary }}
-            labelStyle={{ color: colors.textSecondary }}
-            cursor={{ fill: colors.gridline, opacity: 0.4 }}
-          />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
-            {(active?.rows ?? []).map((r) => (
-              <Cell
-                key={r.label}
-                fill={r.label === highlight ? colors.accent : r.label === mutedLabel ? colors.barMuted : colors.bar}
+      <div className="chart-fill" style={{ height }}>
+        <div className="chart-fill-inner">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 64, bottom: 4, left: 8 }}>
+              <XAxis type="number" hide />
+              <YAxis
+                type="category"
+                dataKey="label"
+                tick={<CategoryTick fill={colors.textPrimary} maxChars={Math.floor(labelWidth / 7.2)} />}
+                axisLine={false}
+                tickLine={false}
+                width={labelWidth}
+                interval={0}
               />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+              <Tooltip
+                formatter={(value) => format(Number(value))}
+                contentStyle={{ background: colors.surface, border: `1px solid ${colors.gridline}`, color: colors.textPrimary }}
+                labelStyle={{ color: colors.textSecondary }}
+                cursor={{ fill: colors.gridline, opacity: 0.4 }}
+              />
+              <Bar dataKey="value" name={active?.valueLabel ?? 'Delitos'} radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
+                {rows.map((r, i) => (
+                  <Cell
+                    key={r.label}
+                    fill={
+                      r.label === highlight ? colors.accent
+                        : r.label === mutedLabel ? colors.barMuted
+                          : i === 0 ? colors.barTop
+                            : colors.barSoft
+                    }
+                  />
+                ))}
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  formatter={(v: unknown) => formatLabel(Number(v))}
+                  fill={colors.textPrimary}
+                  fontSize={14}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   )
 }

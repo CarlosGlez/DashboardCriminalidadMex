@@ -8,18 +8,14 @@ import { FilterBar } from './components/FilterBar'
 import { KpiCards } from './components/KpiCards'
 import { TrendChart } from './components/TrendChart'
 import { RankingBarChart } from './components/RankingBarChart'
+import { RankingTable } from './components/RankingTable'
 import { YearComparisonChart } from './components/YearComparisonChart'
 import { Insights } from './components/Insights'
 import { fmtDecimal } from './utils/format'
-import type { CrimeSummary, Filters, MunicipioTotal } from './types'
+import type { CrimeSummary, Filters } from './types'
 
 // d3-geo y d3-scale solo se descargan cuando se muestra el mapa
 const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) => ({ default: m.ChoroplethMap })))
-
-// En el ranking nacional se agrega el estado para distinguir municipios con el mismo nombre.
-function municipioLabel(m: MunicipioTotal, dentroDeEstado: boolean) {
-  return dentroDeEstado ? m.municipio : `${m.municipio} (${m.entidad})`
-}
 
 const TOP_TIPOS = 10
 const OTROS = 'Otros'
@@ -32,12 +28,12 @@ function topConOtros(tipos: { tipo_delito?: string | null; total: number }[]) {
   return resto > 0 ? [...rows, { label: OTROS, value: resto }] : rows
 }
 
-// Con un estado elegido no hay gráfica por estado: tipo y municipios van lado a lado.
-// Sin estado, los municipios se apilan bajo "Delitos por tipo" (columna izquierda) para no dejar hueco.
+// Delitos por estado (ancho completo, solo sin estado elegido); debajo, tipo y municipios lado a lado.
 function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: Filters }) {
   const tipoChart = (
     <RankingBarChart
       title="Delitos por tipo"
+      labelWidth={230}
       views={[{ key: 'total', label: 'Total', rows: topConOtros(summary.by_tipo) }]}
       mutedLabel={OTROS}
     />
@@ -47,6 +43,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
     <RankingBarChart
       title="Delitos por estado"
       highlight={filters.entidad ?? undefined}
+      labelWidth={250}
       views={[
         {
           key: 'total',
@@ -57,6 +54,8 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
           ? [{
               key: 'tasa',
               label: 'Por 100k hab.',
+              valueLabel: 'Tasa por 100k',
+              formatLabel: (v: number) => fmtDecimal(v),
               rows: [...summary.tasa_by_entidad]
                 .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))
                 .map((e) => ({ label: e.entidad, value: e.tasa ?? 0 })),
@@ -69,33 +68,24 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
 
   const municipiosChart =
     !filters.municipio && summary.by_municipio.length > 0 ? (
-      <RankingBarChart
+      <RankingTable
         title={filters.entidad ? `Top municipios de ${filters.entidad}` : 'Top 15 municipios del país'}
-        views={[{
-          key: 'total',
-          label: 'Total',
-          rows: summary.by_municipio.map((m) => ({ label: municipioLabel(m, !!filters.entidad), value: m.total })),
-        }]}
+        rows={summary.by_municipio.map((m) => ({
+          name: m.municipio,
+          sub: filters.entidad ? undefined : m.entidad,
+          value: m.total,
+        }))}
       />
     ) : null
 
   return (
-    <div className="chart-grid">
-      {filters.entidad ? (
-        <>
-          {tipoChart}
-          {municipiosChart}
-        </>
-      ) : (
-        <>
-          <div className="chart-col">
-            {tipoChart}
-            {municipiosChart}
-          </div>
-          {estadoChart}
-        </>
-      )}
-    </div>
+    <>
+      {!filters.entidad && <div className="chart-grid chart-grid--single">{estadoChart}</div>}
+      <div className={municipiosChart ? 'chart-grid' : 'chart-grid chart-grid--single'}>
+        {tipoChart}
+        {municipiosChart}
+      </div>
+    </>
   )
 }
 
@@ -138,7 +128,7 @@ function App() {
       <header className="dashboard-header">
         <h1>Dashboard de Criminalidad</h1>
         <p className="dashboard-subtitle">
-          Incidencia delictiva del fuero común por estado y municipio, {options.anio_min}-{options.anio_max}. Fuente: SESNSP.
+          {options.anio_min}-{options.anio_max} · Fuente: SESNSP
         </p>
       </header>
 
@@ -150,7 +140,7 @@ function App() {
 
       {summary && (
         <>
-          <KpiCards summary={summary} filters={filters} coverage={coverage} />
+          <KpiCards summary={summary} filters={filters} coverage={coverage} anioMin={options.anio_min} />
 
           <div className="chart-grid chart-grid--single">
             <Suspense fallback={<div className="state-message">Cargando mapa...</div>}>
@@ -162,13 +152,13 @@ function App() {
             <TrendChart trend={summary.trend} />
           </div>
 
-          <RankingCharts summary={summary} filters={filters} />
-
           <div className="chart-grid chart-grid--single">
             <YearComparisonChart trend={summary.trend} />
           </div>
 
-          <Insights summary={summary} filters={filters} coverage={coverage} />
+          <RankingCharts summary={summary} filters={filters} />
+
+          <Insights summary={summary} filters={filters} coverage={coverage} anioMin={options.anio_min} />
         </>
       )}
     </div>

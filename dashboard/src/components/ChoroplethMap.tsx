@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { geoConicConformal, geoPath } from 'd3-geo'
 import { scaleQuantile } from 'd3-scale'
 import { useGeo } from '../hooks/useGeo'
-import { fmtNumber, fmtDecimal, fmtAxis } from '../utils/format'
+import { fmtNumber, fmtDecimal, fmtLegend } from '../utils/format'
 import { useChartColors, useSequentialColors } from '../theme'
 import type { CrimeSummary, EntGeoProps, Filters, MapMunicipioRow, MunGeoProps } from '../types'
 import { aniosAnomalosEn, coverageInScope, describir, formatAnios } from '../utils/coverage'
@@ -30,11 +30,16 @@ interface Shape {
   name: string
   d: string
   value: number | null
+  centroid: [number, number]
+  width: number
+  height: number
 }
 
 const W = 760
 const H = 480
 const PAD = 6
+const SMALL_MUNICIPALITY_PX = 20
+const MARKER_RADIUS_PX = 5
 const MIN_WARNING_SHARE = 0.02 // desde 2% de delitos sin municipio se muestra como aviso
 
 
@@ -43,8 +48,25 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
   const ramp = useSequentialColors()
   const [metric, setMetric] = useState<Metric>('total')
   const [hover, setHover] = useState<Shape | null>(null)
+  const [avisoAbierto, setAvisoAbierto] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const tipRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [pixelsPerUnit, setPixelsPerUnit] = useState(0)
+
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+
+    const measure = () => {
+      const { width, height } = svg.getBoundingClientRect()
+      setPixelsPerUnit(Math.min(width / W, height / H))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(svg)
+    return () => observer.disconnect()
+  }, [])
 
   const porEstado = !filters.entidad
   const hasTasa = summary.tasa_by_entidad.length > 0
@@ -70,7 +92,14 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     const path = geoPath(projection).digits(1)
     return collection.features.map((f) => {
       const p = f.properties as EntGeoProps & MunGeoProps
-      return { key: porEstado ? p.name : p.c, d: path(f) ?? '' }
+      const [[left, top], [right, bottom]] = path.bounds(f)
+      return {
+        key: porEstado ? p.name : p.c,
+        d: path(f) ?? '',
+        centroid: path.centroid(f),
+        width: right - left,
+        height: bottom - top,
+      }
     })
   }, [collection, porEstado])
 
@@ -95,8 +124,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
   const shapes: Shape[] = useMemo(
     () =>
       geometry.map((g) => ({
-        key: g.key,
-        d: g.d,
+        ...g,
         name: porEstado ? String(g.key) : (rowNames.get(g.key as number) ?? `Municipio ${g.key}`),
         value: valueByKey.get(g.key) ?? null,
       })),
@@ -169,6 +197,27 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
   }
 
+  // Línea corta siempre visible; el detalle (avisos) se despliega con el botón
+  let avisoCorto = ''
+  if (porEstado) {
+    if (anomalos.length > 0) {
+      const nombres = anomalos.map((c) => c.entidad)
+      const lista = nombres.length > 6 ? `${nombres.slice(0, 6).join(', ')} y ${nombres.length - 6} más` : nombres.join(', ')
+      avisoCorto = `Datos incompletos o atípicos en ${nombres.length} ${nombres.length === 1 ? 'estado' : 'estados'} (${lista})`
+    }
+  } else {
+    const partes: string[] = []
+    if (anomalos[0]) {
+      partes.push(
+        `Datos incompletos o atípicos en ${filters.entidad} (${formatAnios(aniosAnomalosEn(anomalos[0], filters.anioDesde, filters.anioHasta))})`,
+      )
+    }
+    if (unlocated && unlocated.share >= MIN_WARNING_SHARE) {
+      partes.push(`${(unlocated.share * 100).toFixed(1)}% de los delitos sin municipio asignado`)
+    }
+    avisoCorto = partes.join(' · ')
+  }
+
   // ---- Interacción ----
   const select = (s: Shape) => {
     if (porEstado) {
@@ -201,7 +250,12 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
   }
 
-  const selectedShape = !porEstado ? shapes.find((s) => s.key === filters.municipio) : undefined
+  // Forma seleccionada: el municipio elegido (mapa de municipios) o el estado elegido (mapa de estados)
+  const selectedKey = porEstado ? filters.entidad : filters.municipio
+  const selectedShape = selectedKey !== null ? shapes.find((s) => s.key === selectedKey) : undefined
+  const showMarker =
+    !porEstado && selectedShape && selectedShape.centroid.every(Number.isFinite) &&
+    pixelsPerUnit > 0 && Math.min(selectedShape.width, selectedShape.height) * pixelsPerUnit < SMALL_MUNICIPALITY_PX
 
   const title = porEstado
     ? `Mapa por estado — ${activeMetric === 'tasa' ? 'tasa por 100 mil habitantes' : 'total de delitos'}`
@@ -212,7 +266,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
 
   // Límites de las clases para la leyenda
   const thresholds = scale ? [scale.min, ...scale.q.quantiles(), scale.max] : []
-  const legendFmt = (v: number) => (activeMetric === 'tasa' ? fmtDecimal(v) : fmtAxis(v))
+  const legendFmt = fmtLegend // cortes redondeados y legibles (enteros)
   const legendTitle =
     activeMetric === 'tasa'
       ? 'Delitos por cada 100,000 habitantes (promedio anual del periodo)'
@@ -259,7 +313,20 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
 
       {avisos.length > 0 && (
         <div className="map-warning" role="note">
-          <strong>Atención:</strong> {avisos.join(' ')}
+          <div className="map-warning-row">
+            <span>
+              <strong>Atención:</strong> {avisoCorto}
+            </span>
+            <button
+              type="button"
+              className="view-toggle-btn map-warning-btn"
+              aria-expanded={avisoAbierto}
+              onClick={() => setAvisoAbierto((v) => !v)}
+            >
+              {avisoAbierto ? 'Ocultar detalle' : porEstado ? 'Ver estados y años' : 'Ver detalle'}
+            </button>
+          </div>
+          {avisoAbierto && <p className="map-warning-detail">{avisos.join(' ')}</p>}
         </div>
       )}
       {avisos.length === 0 && unlocated && unlocated.total > 0 && (
@@ -278,20 +345,24 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
       <div className="map-wrap" ref={wrapRef}>
         {loading && <div className="map-loading">Cargando mapa...</div>}
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${W} ${H}`}
           className="map-svg"
           role="group"
           aria-label={title}
           onMouseLeave={() => setHover(null)}
         >
-          {shapes.map((s) => (
+          {/* La forma seleccionada se dibuja al final (encima) y las demás se atenúan sin cambiar su color */}
+          {[...shapes.filter((s) => s !== selectedShape), ...(selectedShape ? [selectedShape] : [])].map((s) => (
             <path
               key={s.key}
               d={s.d}
               className={interactive(s) ? 'map-shape map-shape--clickable' : 'map-shape'}
               fill={scale && s.value !== null ? scale.q(s.value) : colors.noData}
+              fillOpacity={selectedShape && s !== selectedShape ? 0.35 : 1}
               stroke={colors.surface}
               strokeWidth={porEstado ? 1 : 0.6}
+              strokeOpacity={selectedShape && s !== selectedShape ? 0.5 : 1}
               vectorEffect="non-scaling-stroke"
               onMouseEnter={(e) => {
                 setHover(s)
@@ -306,15 +377,42 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
               onKeyDown={porEstado ? (e) => onKey(e, s) : undefined}
             />
           ))}
+          {/* Contorno doble de la selección: trazo exterior oscuro + interior claro (contrasta sobre rellenos claros y oscuros) */}
           {selectedShape && (
-            <path d={selectedShape.d} className="map-outline" fill="none" stroke={colors.textPrimary}
-              strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            <>
+              <path d={selectedShape.d} className="map-outline" fill="none" stroke={colors.textPrimary}
+                strokeWidth={3.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              <path d={selectedShape.d} className="map-outline" fill="none" stroke={colors.surface}
+                strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            </>
           )}
+          {showMarker && (
+            <circle
+              className="map-outline"
+              cx={selectedShape.centroid[0]}
+              cy={selectedShape.centroid[1]}
+              r={MARKER_RADIUS_PX / pixelsPerUnit}
+              fill={colors.textPrimary}
+              stroke="#fff"
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+              aria-hidden="true"
+            />
+          )}
+          {/* Hover: contorno más ligero que el de la selección */}
           {hover && hover.key !== selectedShape?.key && (
             <path d={hover.d} className="map-outline" fill="none" stroke={colors.textPrimary}
-              strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
+              strokeWidth={1.5} strokeOpacity={0.7} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           )}
         </svg>
+
+        {selectedShape && (
+          <div className="map-selected" role="status">
+            <span className="map-selected-kicker">{porEstado ? 'Estado seleccionado' : 'Municipio seleccionado'}</span>
+            <strong>{selectedShape.name}</strong>
+            <span>{selectedShape.value === null ? 'Sin datos' : formatValue(selectedShape.value)}</span>
+          </div>
+        )}
 
         <div ref={tipRef} className="map-tooltip" hidden={!hover}>
           {hover && (

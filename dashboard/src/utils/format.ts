@@ -24,3 +24,52 @@ export function paddedDomain(values: number[]): [number, number] {
   const step = 10 ** Math.max(0, Math.floor(Math.log10(Math.max(max - min, 1))) - 1)
   return [Math.max(0, Math.floor((min - pad) / step) * step), Math.ceil((max + pad) / step) * step]
 }
+
+/** Valor al final de las barras: 7.1 M, 2.4 M, 515k, 950. */
+export function fmtCompact(v: number): string {
+  const abs = Math.abs(v)
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} M`
+  if (abs >= 1_000) return `${Math.round(v / 1_000).toLocaleString('es-MX')}k`
+  return fmtNumber(Math.round(v))
+}
+
+/** Ejes en español: 160 mil, 1.2 M. */
+export function fmtMil(v: number): string {
+  const abs = Math.abs(v)
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} M`
+  if (abs >= 1_000) return `${(v / 1_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} mil`
+  return fmtNumber(v)
+}
+
+/** Dominio y marcas "redondas" (100 mil, 125 mil, 150 mil…) con margen alrededor de los datos. */
+export function niceScale(values: number[]): { domain: [number, number]; ticks: number[] } {
+  const [lo0, hi0] = paddedDomain(values)
+  const raw = (hi0 - lo0) / 4 || 1
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((c) => c >= raw) ?? 10 * mag
+  const lo = Math.floor(lo0 / step) * step
+  const hi = Math.ceil(hi0 / step) * step
+  const ticks: number[] = []
+  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t))
+  return { domain: [lo, hi], ticks }
+}
+
+/** Redondea un corte de leyenda a un número legible: 75, 250, 500, 850, 1.2k, 120k… */
+export function niceLegendValue(v: number): number {
+  const abs = Math.abs(v)
+  if (abs < 20) return Math.round(v)
+  if (abs < 100) return Math.round(v / 5) * 5
+  if (abs < 300) return Math.round(v / 25) * 25
+  if (abs < 1000) return Math.round(v / 50) * 50
+  const mag = 10 ** (Math.floor(Math.log10(abs)) - 1) // 2 cifras significativas
+  return Math.round(v / mag) * mag
+}
+
+/** Etiqueta de un corte de leyenda ya redondeado: 850, 1.2k, 120k, 1.9 M. */
+export function fmtLegend(v: number): string {
+  const r = niceLegendValue(v)
+  const abs = Math.abs(r)
+  if (abs >= 1_000_000) return `${(r / 1_000_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} M`
+  if (abs >= 1_000) return `${(r / 1_000).toLocaleString('es-MX', { maximumFractionDigits: abs < 10_000 ? 1 : 0 })}k`
+  return fmtNumber(r)
+}
