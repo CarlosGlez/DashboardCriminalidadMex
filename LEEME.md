@@ -8,10 +8,10 @@ supabase/02_functions.sql   funciones RPC: filter_options, municipios_by_entidad
 supabase/03..05_*.sql       optimizaciones de rendimiento de crime_summary (vistas materializadas, índices)
 supabase/06_map.sql         RPC map_municipios: total de todos los municipios de un estado (mapa)
 supabase/07_municipios_fix.sql  municipios_by_entidad lee la vista (evita error 500 en estados grandes)
-supabase/08_coverage.sql    RPC data_coverage: estados/años con desglose municipal incompleto
+supabase/08_coverage.sql    RPC data_coverage: estados/años con datos anómalos (incompletos o con cambios bruscos de reporte)
 scripts/prepare_data.py     limpia el CSV municipal del SESNSP y lo deja listo para importar
 scripts/prepare_geo.mjs     baja y simplifica las geometrías de INEGI -> dashboard/public/geo/
-dashboard/                  frontend React + TypeScript + Vite (filtro y ranking de municipios)
+dashboard/                  frontend React + TypeScript + Vite (filtros, mapa coroplético y ranking de municipios)
 ```
 
 ## 1. De dónde salen los datos
@@ -41,14 +41,15 @@ Si la tabla de población está vacía, el dashboard funciona igual y muestra "S
    ```
    \copy crimes_municipal(anio,cve_ent,entidad,cve_mun,municipio,tipo_delito,m01,m02,m03,m04,m05,m06,m07,m08,m09,m10,m11,m12) from 'crimes_municipal.csv' csv header
    ```
-4. **Frontend:**
+4. **Rendimiento, mapa y calidad de datos:** con los datos ya importados, ejecuta en el *SQL Editor*, en este orden, `03_performance.sql`, `04_performance_nacional.sql`, `05_fix_tipo_delito.sql`, `06_map.sql`, `07_municipios_fix.sql` y `08_coverage.sql`. Sin 03-05 la consulta principal da *statement timeout* con el rol `anon`; 06-08 los usan el mapa, el filtro de Municipio y los avisos de calidad. Las vistas materializadas se crean con los datos que haya en ese momento: si las creaste antes de importar, o cargas datos nuevos después, refréscalas (ver sección 4).
+5. **Frontend:**
    ```
    cd dashboard
    cp .env.example .env      # pega tu URL y tu publishable key (Project Settings → API)
    npm install
    npm run dev
    ```
-5. **Deploy (Vercel):** importa el repo, carpeta `dashboard`, y agrega las dos variables de entorno.
+6. **Deploy (Vercel):** importa el repo, carpeta `dashboard`, y agrega las dos variables de entorno.
 
 ## 3. Qué cambió respecto al original
 
