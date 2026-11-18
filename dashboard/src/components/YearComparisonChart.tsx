@@ -2,7 +2,7 @@ import {
   CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import type { TrendPoint } from '../types'
-import { fmtNumber, fmtAxis } from '../utils/format'
+import { fmtNumber, fmtAxis, paddedDomain } from '../utils/format'
 import { useChartColors } from '../theme'
 import { MESES_ABREV } from '../constants'
 
@@ -56,6 +56,7 @@ export function YearComparisonChart({ trend }: Props) {
             tickLine={false}
             width={56}
             tickFormatter={(v) => fmtAxis(Number(v))}
+            domain={paddedDomain(trend.filter((p) => years.includes(p.anio)).map((p) => p.total))}
           />
           <Tooltip
             formatter={(value) => fmtNumber(Number(value))}
@@ -69,7 +70,7 @@ export function YearComparisonChart({ trend }: Props) {
               type="monotone"
               dataKey={String(y)}
               name={String(y)}
-              stroke={y === latest ? colors.series1 : colors.baseline}
+              stroke={y === latest ? colors.accent : colors.barMuted}
               strokeWidth={y === latest ? 3.5 : 1.25}
               dot={false}
               activeDot={{ r: y === latest ? 5 : 3 }}

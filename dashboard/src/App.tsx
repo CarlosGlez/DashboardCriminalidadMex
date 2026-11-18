@@ -11,7 +11,7 @@ import { RankingBarChart } from './components/RankingBarChart'
 import { YearComparisonChart } from './components/YearComparisonChart'
 import { Insights } from './components/Insights'
 import { fmtDecimal } from './utils/format'
-import type { Filters, MunicipioTotal } from './types'
+import type { CrimeSummary, Filters, MunicipioTotal } from './types'
 
 // d3-geo y d3-scale solo se descargan cuando se muestra el mapa
 const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) => ({ default: m.ChoroplethMap })))
@@ -30,6 +30,73 @@ function topConOtros(tipos: { tipo_delito?: string | null; total: number }[]) {
   const rows = sorted.slice(0, TOP_TIPOS).map((t) => ({ label: t.tipo_delito ?? '', value: t.total }))
   const resto = sorted.slice(TOP_TIPOS).reduce((acc, t) => acc + t.total, 0)
   return resto > 0 ? [...rows, { label: OTROS, value: resto }] : rows
+}
+
+// Con un estado elegido no hay gráfica por estado: tipo y municipios van lado a lado.
+// Sin estado, los municipios se apilan bajo "Delitos por tipo" (columna izquierda) para no dejar hueco.
+function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: Filters }) {
+  const tipoChart = (
+    <RankingBarChart
+      title="Delitos por tipo"
+      views={[{ key: 'total', label: 'Total', rows: topConOtros(summary.by_tipo) }]}
+      mutedLabel={OTROS}
+    />
+  )
+
+  const estadoChart = (
+    <RankingBarChart
+      title="Delitos por estado"
+      highlight={filters.entidad ?? undefined}
+      views={[
+        {
+          key: 'total',
+          label: 'Total',
+          rows: summary.by_entidad.map((e) => ({ label: e.entidad ?? '', value: e.total })),
+        },
+        ...(summary.tasa_by_entidad.length > 0
+          ? [{
+              key: 'tasa',
+              label: 'Por 100k hab.',
+              rows: [...summary.tasa_by_entidad]
+                .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))
+                .map((e) => ({ label: e.entidad, value: e.tasa ?? 0 })),
+              formatValue: (v: number) => fmtDecimal(v),
+            }]
+          : []),
+      ]}
+    />
+  )
+
+  const municipiosChart =
+    !filters.municipio && summary.by_municipio.length > 0 ? (
+      <RankingBarChart
+        title={filters.entidad ? `Top municipios de ${filters.entidad}` : 'Top 15 municipios del país'}
+        views={[{
+          key: 'total',
+          label: 'Total',
+          rows: summary.by_municipio.map((m) => ({ label: municipioLabel(m, !!filters.entidad), value: m.total })),
+        }]}
+      />
+    ) : null
+
+  return (
+    <div className="chart-grid">
+      {filters.entidad ? (
+        <>
+          {tipoChart}
+          {municipiosChart}
+        </>
+      ) : (
+        <>
+          <div className="chart-col">
+            {tipoChart}
+            {municipiosChart}
+          </div>
+          {estadoChart}
+        </>
+      )}
+    </div>
+  )
 }
 
 function App() {
@@ -95,54 +162,7 @@ function App() {
             <TrendChart trend={summary.trend} />
           </div>
 
-          <div className="chart-grid">
-            <RankingBarChart
-              title="Delitos por tipo"
-              views={[{
-                key: 'total',
-                label: 'Total',
-                rows: topConOtros(summary.by_tipo),
-              }]}
-              mutedLabel={OTROS}
-            />
-            {!filters.entidad && (
-              <RankingBarChart
-                title="Delitos por estado"
-                highlight={filters.entidad ?? undefined}
-                views={[
-                  {
-                    key: 'total',
-                    label: 'Total',
-                    rows: summary.by_entidad.map((e) => ({ label: e.entidad ?? '', value: e.total })),
-                  },
-                  ...(summary.tasa_by_entidad.length > 0
-                    ? [{
-                        key: 'tasa',
-                        label: 'Por 100k hab.',
-                        rows: [...summary.tasa_by_entidad]
-                          .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))
-                          .map((e) => ({ label: e.entidad, value: e.tasa ?? 0 })),
-                        formatValue: (v: number) => fmtDecimal(v),
-                      }]
-                    : []),
-                ]}
-              />
-            )}
-          </div>
-
-          {!filters.municipio && summary.by_municipio.length > 0 && (
-            <div className="chart-grid chart-grid--single">
-              <RankingBarChart
-                title={filters.entidad ? `Top municipios de ${filters.entidad}` : 'Top 15 municipios del país'}
-                highlight={municipioLabel(summary.by_municipio[0], !!filters.entidad)}
-                views={[{
-                  key: 'total',
-                  label: 'Total',
-                  rows: summary.by_municipio.map((m) => ({ label: municipioLabel(m, !!filters.entidad), value: m.total })),
-                }]}
-              />
-            </div>
-          )}
+          <RankingCharts summary={summary} filters={filters} />
 
           <div className="chart-grid chart-grid--single">
             <YearComparisonChart trend={summary.trend} />

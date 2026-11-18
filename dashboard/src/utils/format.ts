@@ -13,3 +13,14 @@ export function fmtAxis(v: number): string {
   if (abs >= 1_000) return `${(v / 1_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })}k`
   return fmtDecimal(v)
 }
+
+/** Dominio del eje Y con margen alrededor del mínimo y el máximo (no parte de 0). */
+export function paddedDomain(values: number[]): [number, number] {
+  const finite = values.filter((v) => Number.isFinite(v))
+  if (finite.length === 0) return [0, 1]
+  const min = Math.min(...finite)
+  const max = Math.max(...finite)
+  const pad = (max - min) * 0.12 || max * 0.05 || 1
+  const step = 10 ** Math.max(0, Math.floor(Math.log10(Math.max(max - min, 1))) - 1)
+  return [Math.max(0, Math.floor((min - pad) / step) * step), Math.ceil((max + pad) / step) * step]
+}

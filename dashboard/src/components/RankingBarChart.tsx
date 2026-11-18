@@ -96,7 +96,7 @@ export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) 
             {(active?.rows ?? []).map((r) => (
               <Cell
                 key={r.label}
-                fill={r.label === highlight ? colors.critical : r.label === mutedLabel ? colors.baseline : colors.series1}
+                fill={r.label === highlight ? colors.accent : r.label === mutedLabel ? colors.barMuted : colors.bar}
               />
             ))}
           </Bar>

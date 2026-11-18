@@ -2,7 +2,7 @@ import {
   CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import type { TrendPoint } from '../types'
-import { fmtNumber, fmtAxis } from '../utils/format'
+import { fmtNumber, fmtAxis, paddedDomain } from '../utils/format'
 import { useChartColors } from '../theme'
 import { MESES_ABREV } from '../constants'
 
@@ -38,6 +38,7 @@ export function TrendChart({ trend }: Props) {
             tickLine={false}
             width={56}
             tickFormatter={(v) => fmtAxis(Number(v))}
+            domain={paddedDomain(data.map((d) => d.total))}
           />
           <Tooltip
             formatter={(value) => fmtNumber(Number(value))}
@@ -48,7 +49,7 @@ export function TrendChart({ trend }: Props) {
             type="monotone"
             dataKey="total"
             name="Delitos"
-            stroke={colors.series1}
+            stroke={colors.accent}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}

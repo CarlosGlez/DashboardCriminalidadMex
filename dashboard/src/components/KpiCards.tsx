@@ -52,7 +52,7 @@ export function KpiCards({ summary, filters, coverage }: Props) {
 
   return (
     <div className="kpi-row">
-      <div className="stat-tile">
+      <div className="stat-tile stat-tile--accent">
         <span className="stat-label">Total de delitos ({filters.anioDesde}-{filters.anioHasta})</span>
         <span className="stat-value">{fmtNumber(summary.total)}</span>
       </div>

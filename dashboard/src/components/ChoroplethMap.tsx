@@ -4,7 +4,7 @@ import { geoConicConformal, geoPath } from 'd3-geo'
 import { scaleQuantile } from 'd3-scale'
 import { useGeo } from '../hooks/useGeo'
 import { fmtNumber, fmtDecimal, fmtAxis } from '../utils/format'
-import { useChartColors, useDarkMode, useSequentialColors } from '../theme'
+import { useChartColors, useSequentialColors } from '../theme'
 import type { CrimeSummary, EntGeoProps, Filters, MapMunicipioRow, MunGeoProps } from '../types'
 import { aniosAnomalosEn, coverageInScope, describir, formatAnios } from '../utils/coverage'
 import type { CoverageMap } from '../utils/coverage'
@@ -41,7 +41,6 @@ const MIN_WARNING_SHARE = 0.02 // desde 2% de delitos sin municipio se muestra c
 export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }: Props) {
   const colors = useChartColors()
   const ramp = useSequentialColors()
-  const dark = useDarkMode()
   const [metric, setMetric] = useState<Metric>('total')
   const [hover, setHover] = useState<Shape | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -202,8 +201,6 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
   }
 
-  // Borde claro: en modo oscuro los estados de color bajo se perdían contra el fondo
-  const borderColor = dark ? 'rgba(235, 235, 228, 0.75)' : colors.surface
   const selectedShape = !porEstado ? shapes.find((s) => s.key === filters.municipio) : undefined
 
   const title = porEstado
@@ -292,8 +289,8 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
               key={s.key}
               d={s.d}
               className={interactive(s) ? 'map-shape map-shape--clickable' : 'map-shape'}
-              fill={scale && s.value !== null ? scale.q(s.value) : colors.gridline}
-              stroke={borderColor}
+              fill={scale && s.value !== null ? scale.q(s.value) : colors.noData}
+              stroke={colors.surface}
               strokeWidth={porEstado ? 1 : 0.6}
               vectorEffect="non-scaling-stroke"
               onMouseEnter={(e) => {
@@ -349,11 +346,11 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
             <span className="map-legend-end">{activeMetric === 'tasa' ? 'Mayor tasa' : 'Más delitos'}</span>
           </div>
           <div className="map-legend-caption">
-            {dark ? 'Más claro' : 'Más oscuro'} = {activeMetric === 'tasa' ? 'mayor tasa' : 'más delitos'}. Cada color agrupa a
+            Más oscuro = {activeMetric === 'tasa' ? 'mayor tasa' : 'más delitos'}. Cada color agrupa a
             una séptima parte de los {porEstado ? 'estados' : 'municipios'}; los números son los límites entre colores.
           </div>
           <div className="map-legend-nodata">
-            <span style={{ background: colors.gridline }} /> Sin datos
+            <span style={{ background: colors.noData }} /> Sin datos
           </div>
         </div>
       )}
