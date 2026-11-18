@@ -3,7 +3,7 @@ import type { KeyboardEvent, MouseEvent } from 'react'
 import { geoConicConformal, geoPath } from 'd3-geo'
 import { scaleQuantile } from 'd3-scale'
 import { useGeo } from '../hooks/useGeo'
-import { fmtNumber, fmtDecimal, fmtAxis } from '../utils/format'
+import { fmtNumber, fmtDecimal, fmtLegend } from '../utils/format'
 import { useChartColors, useSequentialColors } from '../theme'
 import type { CrimeSummary, EntGeoProps, Filters, MapMunicipioRow, MunGeoProps } from '../types'
 import { aniosAnomalosEn, coverageInScope, describir, formatAnios } from '../utils/coverage'
@@ -223,7 +223,9 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
   }
 
-  const selectedShape = !porEstado ? shapes.find((s) => s.key === filters.municipio) : undefined
+  // Forma seleccionada: el municipio elegido (mapa de municipios) o el estado elegido (mapa de estados)
+  const selectedKey = porEstado ? filters.entidad : filters.municipio
+  const selectedShape = selectedKey !== null ? shapes.find((s) => s.key === selectedKey) : undefined
 
   const title = porEstado
     ? `Mapa por estado — ${activeMetric === 'tasa' ? 'tasa por 100 mil habitantes' : 'total de delitos'}`
@@ -234,7 +236,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
 
   // Límites de las clases para la leyenda
   const thresholds = scale ? [scale.min, ...scale.q.quantiles(), scale.max] : []
-  const legendFmt = (v: number) => (activeMetric === 'tasa' ? fmtDecimal(v) : fmtAxis(v))
+  const legendFmt = fmtLegend // cortes redondeados y legibles (enteros)
   const legendTitle =
     activeMetric === 'tasa'
       ? 'Delitos por cada 100,000 habitantes (promedio anual del periodo)'
@@ -319,14 +321,17 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
           aria-label={title}
           onMouseLeave={() => setHover(null)}
         >
-          {shapes.map((s) => (
+          {/* La forma seleccionada se dibuja al final (encima) y las demás se atenúan sin cambiar su color */}
+          {[...shapes.filter((s) => s !== selectedShape), ...(selectedShape ? [selectedShape] : [])].map((s) => (
             <path
               key={s.key}
               d={s.d}
               className={interactive(s) ? 'map-shape map-shape--clickable' : 'map-shape'}
               fill={scale && s.value !== null ? scale.q(s.value) : colors.noData}
+              fillOpacity={selectedShape && s !== selectedShape ? 0.35 : 1}
               stroke={colors.surface}
               strokeWidth={porEstado ? 1 : 0.6}
+              strokeOpacity={selectedShape && s !== selectedShape ? 0.5 : 1}
               vectorEffect="non-scaling-stroke"
               onMouseEnter={(e) => {
                 setHover(s)
@@ -341,15 +346,29 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
               onKeyDown={porEstado ? (e) => onKey(e, s) : undefined}
             />
           ))}
+          {/* Contorno doble de la selección: trazo exterior oscuro + interior claro (contrasta sobre rellenos claros y oscuros) */}
           {selectedShape && (
-            <path d={selectedShape.d} className="map-outline" fill="none" stroke={colors.textPrimary}
-              strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            <>
+              <path d={selectedShape.d} className="map-outline" fill="none" stroke={colors.textPrimary}
+                strokeWidth={3.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              <path d={selectedShape.d} className="map-outline" fill="none" stroke={colors.surface}
+                strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            </>
           )}
+          {/* Hover: contorno más ligero que el de la selección */}
           {hover && hover.key !== selectedShape?.key && (
             <path d={hover.d} className="map-outline" fill="none" stroke={colors.textPrimary}
-              strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
+              strokeWidth={1.5} strokeOpacity={0.7} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           )}
         </svg>
+
+        {selectedShape && (
+          <div className="map-selected" role="status">
+            <span className="map-selected-kicker">{porEstado ? 'Estado seleccionado' : 'Municipio seleccionado'}</span>
+            <strong>{selectedShape.name}</strong>
+            <span>{selectedShape.value === null ? 'Sin datos' : formatValue(selectedShape.value)}</span>
+          </div>
+        )}
 
         <div ref={tipRef} className="map-tooltip" hidden={!hover}>
           {hover && (

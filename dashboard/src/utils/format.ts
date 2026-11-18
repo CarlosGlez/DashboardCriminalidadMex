@@ -53,3 +53,23 @@ export function niceScale(values: number[]): { domain: [number, number]; ticks: 
   for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t))
   return { domain: [lo, hi], ticks }
 }
+
+/** Redondea un corte de leyenda a un número legible: 75, 250, 500, 850, 1.2k, 120k… */
+export function niceLegendValue(v: number): number {
+  const abs = Math.abs(v)
+  if (abs < 20) return Math.round(v)
+  if (abs < 100) return Math.round(v / 5) * 5
+  if (abs < 300) return Math.round(v / 25) * 25
+  if (abs < 1000) return Math.round(v / 50) * 50
+  const mag = 10 ** (Math.floor(Math.log10(abs)) - 1) // 2 cifras significativas
+  return Math.round(v / mag) * mag
+}
+
+/** Etiqueta de un corte de leyenda ya redondeado: 850, 1.2k, 120k, 1.9 M. */
+export function fmtLegend(v: number): string {
+  const r = niceLegendValue(v)
+  const abs = Math.abs(r)
+  if (abs >= 1_000_000) return `${(r / 1_000_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} M`
+  if (abs >= 1_000) return `${(r / 1_000).toLocaleString('es-MX', { maximumFractionDigits: abs < 10_000 ? 1 : 0 })}k`
+  return fmtNumber(r)
+}

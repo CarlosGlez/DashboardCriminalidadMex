@@ -2,7 +2,7 @@ import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import type { TrendPoint } from '../types'
-import { fmtNumber, fmtAxis, paddedDomain } from '../utils/format'
+import { fmtNumber, fmtAxis, niceScale } from '../utils/format'
 import { useChartColors } from '../theme'
 import { MESES_ABREV } from '../constants'
 
@@ -25,6 +25,7 @@ export function TrendChart({ trend }: Props) {
     }
   }
   const byKey = new Map(data.map((d) => [d.key, d]))
+  const { domain, ticks: yTicks } = niceScale(data.map((d) => d.total))
 
   return (
     <div className="chart-card">
@@ -47,7 +48,8 @@ export function TrendChart({ trend }: Props) {
             tickLine={false}
             width={56}
             tickFormatter={(v) => fmtAxis(Number(v))}
-            domain={paddedDomain(data.map((d) => d.total))}
+            domain={domain}
+            ticks={yTicks}
           />
           <Tooltip
             formatter={(value) => fmtNumber(Number(value))}
