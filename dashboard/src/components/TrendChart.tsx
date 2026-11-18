@@ -37,12 +37,12 @@ export function TrendChart({ trend }: Props) {
             ticks={ticks}
             interval={0}
             tickFormatter={(k) => String(byKey.get(String(k))?.anio ?? '')}
-            tick={{ fill: colors.muted, fontSize: 12 }}
+            tick={{ fill: colors.muted, fontSize: 13 }}
             axisLine={{ stroke: colors.baseline }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: colors.muted, fontSize: 12 }}
+            tick={{ fill: colors.muted, fontSize: 13 }}
             axisLine={false}
             tickLine={false}
             width={56}

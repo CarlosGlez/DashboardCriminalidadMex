@@ -7,6 +7,8 @@ interface Props {
   summary: CrimeSummary
   filters: Filters
   coverage: CoverageMap
+  /** Primer año con datos: la variación solo se calcula si el periodo anterior completo cae dentro. */
+  anioMin: number
 }
 
 
@@ -19,19 +21,20 @@ function WarnTip({ text }: { text: string }) {
   )
 }
 
-export function KpiCards({ summary, filters, coverage }: Props) {
+export function KpiCards({ summary, filters, coverage, anioMin }: Props) {
+  const span = filters.anioHasta - filters.anioDesde + 1
+  const prevDesde = filters.anioDesde - span
+  const prevHasta = filters.anioDesde - 1
+
+  // Si al periodo anterior le falta cualquier año (empieza antes del primer año con datos), la comparación sería falsa
   const variacion =
-    summary.prev_total > 0
+    prevDesde >= anioMin && summary.prev_total > 0
       ? ((summary.total - summary.prev_total) / summary.prev_total) * 100
       : null
 
   const topTipo = summary.by_tipo[0]
   const monthsInRange = (filters.anioHasta - filters.anioDesde + 1) * 12
   const promedioMensual = summary.total / monthsInRange
-
-  const span = filters.anioHasta - filters.anioDesde + 1
-  const prevDesde = filters.anioDesde - span
-  const prevHasta = filters.anioDesde - 1
 
   // Estados con años anómalos (incompletos o con cambios bruscos de reporte) en el periodo o en el
   // periodo anterior: el total de esos años no es comparable y la variación puede distorsionarse.
@@ -51,7 +54,7 @@ export function KpiCards({ summary, filters, coverage }: Props) {
         )
 
   return (
-    <div className="kpi-row">
+    <div className="kpi-row" style={{ ['--kpi-others' as string]: variacion === null ? 3 : 4 }}>
       <div className="stat-tile stat-tile--accent stat-tile--wide">
         <span className="stat-label">Total de delitos ({filters.anioDesde}-{filters.anioHasta})</span>
         <span className="stat-value stat-value--hero">{fmtNumber(summary.total)}</span>
@@ -60,7 +63,7 @@ export function KpiCards({ summary, filters, coverage }: Props) {
       {variacion !== null && (
         <div className="stat-tile">
           <span className="stat-label">
-            Variación vs. periodo anterior ({prevDesde}-{prevHasta})
+            Vs. {prevDesde}-{prevHasta}
             {incompletos.length > 0 && (
               <WarnTip text={`Ojo: incluye años atípicos o incompletos: ${describir(incompletos, prevDesde, filters.anioHasta)}.`} />
             )}

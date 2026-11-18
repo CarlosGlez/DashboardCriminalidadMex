@@ -11,6 +11,7 @@ interface Props {
   summary: CrimeSummary
   filters: Filters
   coverage: CoverageMap
+  anioMin: number
 }
 
 
@@ -150,7 +151,7 @@ function buildActionPlan(
   return { headline, secondary }
 }
 
-export function Insights({ summary: rawSummary, filters, coverage }: Props) {
+export function Insights({ summary: rawSummary, filters, coverage, anioMin }: Props) {
   // Cobertura de datos (data_coverage): entidad_growth y tipo_growth comparan solo el primer y el
   // último año del rango. Si uno de esos años es anómalo para un estado (p. ej. Oaxaca 2015 → +378%),
   // el crecimiento sale distorsionado, así que esos estados se excluyen del ranking de estados.
@@ -170,7 +171,7 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
   // Notas: crecimiento por tipo (extremos del rango), variación vs periodo anterior (rango + anterior)
   // y tasa por 100k (promedio del rango: un año anómalo la distorsiona y con ella el lugar en el ranking)
   const afectaTipo = enAlcance.some((c) => tocaExtremos(c, anioDesde, anioHasta))
-  const hayPrevio = rawSummary.prev_total > 0 // sin datos previos no hay variación que distorsionar
+  const hayPrevio = prevDesde >= anioMin && rawSummary.prev_total > 0 // misma regla que la tarjeta de variación: periodo anterior completo
   const afectaVariacion = hayPrevio && enAlcance.some((c) => aniosAnomalosEn(c, prevDesde, anioHasta).length > 0)
   const afectaTasa =
     rawSummary.tasa_by_entidad.length > 0 &&

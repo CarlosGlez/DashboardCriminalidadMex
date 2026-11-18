@@ -33,8 +33,8 @@ interface Props {
   labelWidth?: number
 }
 
-const ROW_HEIGHT = 36
-const LINE_HEIGHT = 13
+const ROW_HEIGHT = 38
+const LINE_HEIGHT = 15
 
 // Parte un nombre en líneas de a lo sumo `maxChars` caracteres, sin cortar palabras ni truncar.
 function wrapLabel(text: string, maxChars: number): string[] {
@@ -66,7 +66,7 @@ function CategoryTick({ x, y, index, payload, fill, maxChars }: TickProps) {
   const lines = wrapLabel(String(payload?.value ?? ''), maxChars)
   const firstDy = 4 - ((lines.length - 1) * LINE_HEIGHT) / 2
   return (
-    <text x={x} y={y} textAnchor="end" fill={fill} fontSize={12} fontWeight={index === 0 ? 700 : 400}>
+    <text x={x} y={y} textAnchor="end" fill={fill} fontSize={13} fontWeight={index === 0 ? 700 : 400}>
       {lines.map((line, i) => (
         <tspan key={i} x={x} dy={i === 0 ? firstDy : LINE_HEIGHT}>
           {line}
@@ -106,7 +106,7 @@ export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidt
           </div>
         )}
       </div>
-      <div className="chart-fill" style={{ minHeight: height }}>
+      <div className="chart-fill" style={{ height }}>
         <div className="chart-fill-inner">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 64, bottom: 4, left: 8 }}>
@@ -114,7 +114,7 @@ export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidt
               <YAxis
                 type="category"
                 dataKey="label"
-                tick={<CategoryTick fill={colors.textPrimary} maxChars={Math.floor(labelWidth / 6.4)} />}
+                tick={<CategoryTick fill={colors.textPrimary} maxChars={Math.floor(labelWidth / 7.2)} />}
                 axisLine={false}
                 tickLine={false}
                 width={labelWidth}
@@ -143,7 +143,7 @@ export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidt
                   position="right"
                   formatter={(v: unknown) => formatLabel(Number(v))}
                   fill={colors.textPrimary}
-                  fontSize={12}
+                  fontSize={14}
                 />
               </Bar>
             </BarChart>

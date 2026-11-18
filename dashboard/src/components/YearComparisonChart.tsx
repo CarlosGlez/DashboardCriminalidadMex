@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import type { TrendPoint } from '../types'
-import { fmtNumber, fmtMil, paddedDomain } from '../utils/format'
+import { fmtNumber, fmtMil, niceScale } from '../utils/format'
 import { useChartColors } from '../theme'
 import { MESES_ABREV } from '../constants'
 
@@ -17,6 +17,24 @@ export function YearComparisonChart({ trend }: Props) {
   const colors = useChartColors()
   const [picked, setPicked] = useState<number[] | null>(null)
   const [open, setOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  // El menú se cierra con Esc y con clic fuera
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    const onDown = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onDown)
+    }
+  }, [open])
 
   const allYears = Array.from(new Set(trend.map((p) => p.anio))).sort((a, b) => a - b)
 
@@ -40,6 +58,12 @@ export function YearComparisonChart({ trend }: Props) {
     setPicked(next)
   }
 
+  // Elegir un año en el menú lo cierra
+  const choose = (y: number) => {
+    toggle(y)
+    setOpen(false)
+  }
+
   const byMonth = new Map<number, Record<string, number | string>>()
   for (let mes = 1; mes <= 12; mes++) byMonth.set(mes, { label: MESES_ABREV[mes - 1] })
   for (const p of trend) {
@@ -47,12 +71,13 @@ export function YearComparisonChart({ trend }: Props) {
     byMonth.get(p.mes)![String(p.anio)] = p.total
   }
   const data = Array.from(byMonth.values())
+  const { domain, ticks } = niceScale(trend.filter((p) => active.includes(p.anio)).map((p) => p.total))
 
   return (
     <div className="chart-card">
       <div className="chart-card-header">
         <h3>Comparativa año contra año</h3>
-        <div className="year-picker">
+        <div className="year-picker" ref={pickerRef}>
           <ul className="year-chips" aria-label="Años activos">
             {[...active].reverse().map((y) => (
               <li key={y} className="year-chip">
@@ -88,7 +113,7 @@ export function YearComparisonChart({ trend }: Props) {
                       className={on ? 'year-option year-option--on' : 'year-option'}
                       aria-pressed={on}
                       disabled={blocked}
-                      onClick={() => toggle(y)}
+                      onClick={() => choose(y)}
                     >
                       {y}
                     </button>
@@ -104,17 +129,18 @@ export function YearComparisonChart({ trend }: Props) {
           <CartesianGrid stroke={colors.gridline} vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fill: colors.muted, fontSize: 12 }}
+            tick={{ fill: colors.muted, fontSize: 13 }}
             axisLine={{ stroke: colors.baseline }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: colors.muted, fontSize: 12 }}
+            tick={{ fill: colors.muted, fontSize: 13 }}
             axisLine={false}
             tickLine={false}
-            width={64}
+            width={72}
             tickFormatter={(v) => fmtMil(Number(v))}
-            domain={paddedDomain(trend.filter((p) => active.includes(p.anio)).map((p) => p.total))}
+            domain={domain}
+            ticks={ticks}
           />
           <Tooltip
             formatter={(value) => fmtNumber(Number(value))}

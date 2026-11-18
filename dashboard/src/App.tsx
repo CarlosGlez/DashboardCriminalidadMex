@@ -33,6 +33,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
   const tipoChart = (
     <RankingBarChart
       title="Delitos por tipo"
+      labelWidth={230}
       views={[{ key: 'total', label: 'Total', rows: topConOtros(summary.by_tipo) }]}
       mutedLabel={OTROS}
     />
@@ -42,7 +43,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
     <RankingBarChart
       title="Delitos por estado"
       highlight={filters.entidad ?? undefined}
-      labelWidth={240}
+      labelWidth={250}
       views={[
         {
           key: 'total',
@@ -139,7 +140,7 @@ function App() {
 
       {summary && (
         <>
-          <KpiCards summary={summary} filters={filters} coverage={coverage} />
+          <KpiCards summary={summary} filters={filters} coverage={coverage} anioMin={options.anio_min} />
 
           <div className="chart-grid chart-grid--single">
             <Suspense fallback={<div className="state-message">Cargando mapa...</div>}>
@@ -157,7 +158,7 @@ function App() {
 
           <RankingCharts summary={summary} filters={filters} />
 
-          <Insights summary={summary} filters={filters} coverage={coverage} />
+          <Insights summary={summary} filters={filters} coverage={coverage} anioMin={options.anio_min} />
         </>
       )}
     </div>

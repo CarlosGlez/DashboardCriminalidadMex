@@ -40,3 +40,16 @@ export function fmtMil(v: number): string {
   if (abs >= 1_000) return `${(v / 1_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} mil`
   return fmtNumber(v)
 }
+
+/** Dominio y marcas "redondas" (100 mil, 125 mil, 150 mil…) con margen alrededor de los datos. */
+export function niceScale(values: number[]): { domain: [number, number]; ticks: number[] } {
+  const [lo0, hi0] = paddedDomain(values)
+  const raw = (hi0 - lo0) / 4 || 1
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((c) => c >= raw) ?? 10 * mag
+  const lo = Math.floor(lo0 / step) * step
+  const hi = Math.ceil(hi0 / step) * step
+  const ticks: number[] = []
+  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t))
+  return { domain: [lo, hi], ticks }
+}
