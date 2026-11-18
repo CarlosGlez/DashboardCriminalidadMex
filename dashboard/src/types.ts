@@ -26,6 +26,40 @@ export interface MunicipioTotal {
   total: number
 }
 
+// Fila de la RPC map_municipios (total de un municipio del estado elegido).
+// Incluye las claves "No especificado" / "Otros municipios" (cve_mun terminado en 998/999),
+// que no existen en el mapa.
+export interface MapMunicipioRow {
+  cve_mun: number
+  municipio: string
+  total: number
+}
+
+// Fila de la RPC data_coverage (supabase/08_coverage.sql): estados con años anómalos
+// (incompletos o con cambios bruscos de reporte). Los estados sin años anómalos no aparecen.
+//  - 'arranque':  los años anómalos son un bloque pegado al primer año (tiene anio_completo_desde)
+//  - 'puntual':   un solo año anómalo aislado
+//  - 'inestable': varios años anómalos fuera del bloque inicial; serie no comparable
+export type CoverageTipo = 'arranque' | 'puntual' | 'inestable'
+
+export interface EntidadCoverage {
+  entidad: string
+  tipo: CoverageTipo
+  anios_anomalos: number[]
+  anio_completo_desde: number | null // solo en 'arranque': último año anómalo + 1
+  anios_sin_municipio?: number[]
+  pct_sin_max: number | null // peor % de delitos sin municipio; null si no hubo años por ese criterio
+}
+
+// Propiedades de las geometrías (dashboard/public/geo, generadas con scripts/prepare_geo.mjs)
+export interface EntGeoProps {
+  name: string // nombre INEGI; coincide exactamente con `entidad` en la BD
+  e: number // cve_ent
+}
+export interface MunGeoProps {
+  c: number // cve_mun (clave INEGI de 5 dígitos como entero)
+}
+
 export interface TrendPoint {
   anio: number
   mes: number

@@ -1,13 +1,16 @@
 import type { CrimeSummary, Filters } from '../types'
+import { aniosAnomalosEn, coverageInScope, describir } from '../utils/coverage'
+import type { CoverageMap } from '../utils/coverage'
 
 interface Props {
   summary: CrimeSummary
   filters: Filters
+  coverage: CoverageMap
 }
 
 const numberFmt = new Intl.NumberFormat('es-MX')
 
-export function KpiCards({ summary, filters }: Props) {
+export function KpiCards({ summary, filters, coverage }: Props) {
   const variacion =
     summary.prev_total > 0
       ? ((summary.total - summary.prev_total) / summary.prev_total) * 100
@@ -20,6 +23,23 @@ export function KpiCards({ summary, filters }: Props) {
   const span = filters.anioHasta - filters.anioDesde + 1
   const prevDesde = filters.anioDesde - span
   const prevHasta = filters.anioDesde - 1
+
+  // Estados con años anómalos (incompletos o con cambios bruscos de reporte) en el periodo o en el
+  // periodo anterior: el total de esos años no es comparable y la variación puede distorsionarse.
+  const incompletos =
+    variacion === null
+      ? []
+      : coverageInScope(coverage, filters.entidad).filter(
+          (c) => aniosAnomalosEn(c, prevDesde, filters.anioHasta).length > 0,
+        )
+
+  // La tasa es el promedio anual del rango: un año anómalo la distorsiona
+  const incompletosTasa =
+    summary.tasa_100k === null
+      ? []
+      : coverageInScope(coverage, filters.entidad).filter(
+          (c) => aniosAnomalosEn(c, filters.anioDesde, filters.anioHasta).length > 0,
+        )
 
   return (
     <div className="kpi-row">
@@ -37,6 +57,11 @@ export function KpiCards({ summary, filters }: Props) {
             <span aria-hidden="true">{variacion >= 0 ? '▲' : '▼'}</span>
             {Math.abs(variacion).toFixed(1)}%
             <span className="stat-delta-label">{variacion >= 0 ? 'aumento' : 'disminución'}</span>
+          </span>
+        )}
+        {incompletos.length > 0 && (
+          <span className="stat-sub">
+            Ojo: incluye años atípicos o incompletos: {describir(incompletos, prevDesde, filters.anioHasta)}.
           </span>
         )}
       </div>
@@ -58,6 +83,11 @@ export function KpiCards({ summary, filters }: Props) {
           <span className="stat-value stat-value--muted">Sin datos de población</span>
         ) : (
           <span className="stat-value">{summary.tasa_100k.toLocaleString('es-MX', { maximumFractionDigits: 1 })}</span>
+        )}
+        {incompletosTasa.length > 0 && (
+          <span className="stat-sub">
+            Ojo: el promedio incluye años atípicos o incompletos: {describir(incompletosTasa, filters.anioDesde, filters.anioHasta)}.
+          </span>
         )}
       </div>
     </div>

@@ -5,7 +5,12 @@ Réplica del proyecto `Jorge0x1/criminalidad`, con un backend propio en Supabase
 ```
 supabase/01_schema.sql      tablas (crimes_municipal, poblacion_estatal) y seguridad
 supabase/02_functions.sql   funciones RPC: filter_options, municipios_by_entidad, crime_summary
+supabase/03..05_*.sql       optimizaciones de rendimiento de crime_summary (vistas materializadas, índices)
+supabase/06_map.sql         RPC map_municipios: total de todos los municipios de un estado (mapa)
+supabase/07_municipios_fix.sql  municipios_by_entidad lee la vista (evita error 500 en estados grandes)
+supabase/08_coverage.sql    RPC data_coverage: estados/años con desglose municipal incompleto
 scripts/prepare_data.py     limpia el CSV municipal del SESNSP y lo deja listo para importar
+scripts/prepare_geo.mjs     baja y simplifica las geometrías de INEGI -> dashboard/public/geo/
 dashboard/                  frontend React + TypeScript + Vite (filtro y ranking de municipios)
 ```
 
@@ -53,8 +58,16 @@ Si la tabla de población está vacía, el dashboard funciona igual y muestra "S
 - El ranking por tasa por 100k solo aparece cuando hay población cargada.
 - Municipios con el mismo nombre en distintos estados se distinguen por su clave INEGI (`cve_mun`).
 
-## 4. Pendiente / mejoras para la entrega
+## 4. Mapa coroplético
+
+- Sin estado elegido: mapa de estados (total o tasa por 100k). Con estado: mapa de sus municipios (total). Clic para filtrar.
+- Ejecuta en el SQL Editor, en orden, `06_map.sql`, `07_municipios_fix.sql` y `08_coverage.sql` (después de 05). Los tres son idempotentes y leen las vistas materializadas: tras cargar datos nuevos corre `refresh materialized view concurrently` en `crimes_entidad_anio` y `crimes_municipio_anio`.
+- Geometrías: Marco Geoestadístico de INEGI (servicio `gaia.inegi.org.mx/wscatgeo`, versión diciembre 2025), simplificadas con mapshaper. Se regeneran con `node scripts/prepare_geo.mjs` (solo se versionan los `.topo.json` de `dashboard/public/geo/`; los originales van a `geo_raw/`, ignorada por git).
+- Los municipios se unen por `cve_mun` (clave INEGI) y los estados por nombre (coincide exactamente con el de INEGI).
+- Delitos sin municipio (`No Especificado` / `Otros Municipios`, claves 998/999) no se pueden dibujar: el mapa muestra cuántos son.
+- **Calidad de datos:** algunos estados tienen años con datos incompletos o cambios bruscos de reporte. `data_coverage()` (08) marca un (estado, año) como anómalo si: ≥10% de sus delitos van a claves 998/999; o su total es ≥3× / ≤1/3 de la mediana de sus años; o está entre 2× y 3× (o su inverso) de la mediana y además difiere ≥1.5× de un año vecino (así no marca ascensos graduales); o es parte de un bloque inicial con total <0.6× el del año siguiente. Los clasifica en `arranque` (bloque inicial: Oaxaca 2015-2017, Colima 2015-2016; con «completo desde»), `puntual` (un año aislado: Quintana Roo 2016) e `inestable` (Campeche 2021-2025, Yucatán 2015-2017 y 2022: serie no comparable). El dashboard avisa en el mapa, en los KPI de variación y tasa y en Interpretación. Del ranking de crecimiento por estado se excluye a un estado `inestable` si el rango incluye cualquier año anómalo, y a uno `arranque`/`puntual` solo si el primer o el último año del rango es anómalo. Límites: no detecta un último año incompleto; no distingue un cambio de nivel real de un cambio de reporte (p. ej. Nayarit desde 2022, que no se marca); la gráfica de ranking de tasa por estado no lleva nota propia.
+
+## 5. Pendiente / mejoras para la entrega
 
 - Población municipal para la tasa por 100k a nivel municipio.
-- Mapa por municipio (requiere GeoJSON municipal de INEGI).
 - Actualización mensual de los datos (el SESNSP publica cada mes).
