@@ -11,6 +11,8 @@ export function useCrimeSummary(filters: Filters) {
     let cancelled = false
     setLoading(true)
     setError(null)
+    // Evita mostrar datos de otro filtro mientras carga o si la consulta falla
+    setSummary(null)
     supabase
       .rpc('crime_summary', {
         p_anio_desde: filters.anioDesde,
@@ -21,8 +23,10 @@ export function useCrimeSummary(filters: Filters) {
       })
       .then(({ data, error }) => {
         if (cancelled) return
-        if (error) setError(error.message)
-        else setSummary(data as CrimeSummary)
+        if (error) {
+          setSummary(null)
+          setError(error.message)
+        } else setSummary(data as CrimeSummary)
         setLoading(false)
       })
     return () => {
