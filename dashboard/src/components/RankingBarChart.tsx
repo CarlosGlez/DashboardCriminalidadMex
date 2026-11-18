@@ -51,7 +51,7 @@ export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidt
   const height = Math.max(180, (active?.rows.length ?? 0) * 32)
 
   return (
-    <div className="chart-card">
+    <div className="chart-card chart-card--fill">
       <div className="chart-card-header">
         <h3>{title}</h3>
         {views.length > 1 && (
@@ -69,7 +69,9 @@ export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidt
           </div>
         )}
       </div>
-      <ResponsiveContainer width="100%" height={height}>
+      <div className="chart-fill" style={{ minHeight: height }}>
+        <div className="chart-fill-inner">
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart data={active?.rows ?? []} layout="vertical" margin={{ top: 8, right: 24, bottom: 0, left: 8 }}>
           <CartesianGrid stroke={colors.gridline} horizontal={false} />
           <XAxis
@@ -104,6 +106,8 @@ export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidt
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   )
 }

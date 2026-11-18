@@ -86,7 +86,7 @@ export function KpiCards({ summary, filters, coverage }: Props) {
 
       <div className="stat-tile">
         <span className="stat-label">
-          Tasa anual por 100k habitantes
+          Tasa por 100k hab.
           {incompletosTasa.length > 0 && (
             <WarnTip
               text={`Ojo: el promedio incluye años atípicos o incompletos: ${describir(incompletosTasa, filters.anioDesde, filters.anioHasta)}.`}

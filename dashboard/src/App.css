@@ -131,7 +131,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .chart-grid--single {
@@ -142,6 +142,21 @@
   .chart-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.chart-card--fill {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-fill {
+  position: relative;
+  flex: 1;
+}
+
+.chart-fill-inner {
+  position: absolute;
+  inset: 0;
 }
 
 .chart-card {

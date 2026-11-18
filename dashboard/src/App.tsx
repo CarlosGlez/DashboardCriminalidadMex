@@ -11,14 +11,15 @@ import { RankingBarChart } from './components/RankingBarChart'
 import { YearComparisonChart } from './components/YearComparisonChart'
 import { Insights } from './components/Insights'
 import { fmtDecimal } from './utils/format'
+import { ENTIDAD_ABREV } from './constants'
 import type { CrimeSummary, Filters, MunicipioTotal } from './types'
 
 // d3-geo y d3-scale solo se descargan cuando se muestra el mapa
 const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) => ({ default: m.ChoroplethMap })))
 
-// En el ranking nacional se agrega el estado para distinguir municipios con el mismo nombre.
+// En el ranking nacional se agrega el estado (abreviado) para distinguir municipios con el mismo nombre.
 function municipioLabel(m: MunicipioTotal, dentroDeEstado: boolean) {
-  return dentroDeEstado ? m.municipio : `${m.municipio} (${m.entidad})`
+  return dentroDeEstado ? m.municipio : `${m.municipio}, ${ENTIDAD_ABREV[m.entidad] ?? m.entidad}`
 }
 
 const TOP_TIPOS = 10
@@ -72,6 +73,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
     !filters.municipio && summary.by_municipio.length > 0 ? (
       <RankingBarChart
         title={filters.entidad ? `Top municipios de ${filters.entidad}` : 'Top 15 municipios del país'}
+        labelWidth={270}
         views={[{
           key: 'total',
           label: 'Total',
