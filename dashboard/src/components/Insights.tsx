@@ -1,3 +1,4 @@
+import { fmtNumber, fmtDecimal } from '../utils/format'
 import type { CrimeSummary, Filters } from '../types'
 import { MESES } from '../constants'
 import {
@@ -11,8 +12,6 @@ interface Props {
   coverage: CoverageMap
 }
 
-const numberFmt = new Intl.NumberFormat('es-MX')
-const tasaFmt = (v: number) => v.toLocaleString('es-MX', { maximumFractionDigits: 1 })
 
 function seasonalityPeak(trend: CrimeSummary['trend']) {
   const totals = new Array(12).fill(0)
@@ -102,7 +101,7 @@ function buildActionPlan(
     const distintoLider = topGrowthEntidad && topGrowthEntidad.entidad !== topTasaEntidad.entidad
     headline = {
       title: 'Prioridad #1',
-      body: `Concentrar recursos en ${topTasaEntidad.entidad} (mayor tasa de incidencia del país: ${tasaFmt(topTasaEntidad.tasa!)} por cada 100,000 habitantes), con foco en ${topTipoLabel.toLowerCase()}. Conviene anticipar esa capacidad desde ${anticipo.toLowerCase()}, ya que ${peakMonth.toLowerCase()} concentra cada año, en promedio, ${liftPct.toFixed(0)}% más casos que el resto (${periodoHistorico}; es un patrón recurrente, no un pico ya ocurrido).${distintoLider ? ` Al mismo tiempo, vigilar a ${topGrowthEntidad!.entidad}: aunque hoy tiene menor tasa, es el estado que más rápido está creciendo (${topGrowthEntidad!.growth_pct! >= 0 ? '+' : ''}${topGrowthEntidad!.growth_pct}%) y podría volverse la siguiente prioridad.` : ''}`,
+      body: `Concentrar recursos en ${topTasaEntidad.entidad} (mayor tasa de incidencia del país: ${fmtDecimal(topTasaEntidad.tasa!)} por cada 100,000 habitantes), con foco en ${topTipoLabel.toLowerCase()}. Conviene anticipar esa capacidad desde ${anticipo.toLowerCase()}, ya que ${peakMonth.toLowerCase()} concentra cada año, en promedio, ${liftPct.toFixed(0)}% más casos que el resto (${periodoHistorico}; es un patrón recurrente, no un pico ya ocurrido).${distintoLider ? ` Al mismo tiempo, vigilar a ${topGrowthEntidad!.entidad}: aunque hoy tiene menor tasa, es el estado que más rápido está creciendo (${topGrowthEntidad!.growth_pct! >= 0 ? '+' : ''}${topGrowthEntidad!.growth_pct}%) y podría volverse la siguiente prioridad.` : ''}`,
     }
   } else {
     headline = {
@@ -117,7 +116,7 @@ function buildActionPlan(
   if (topGrowthTipo) {
     secondary.push({
       title: 'Categoría de riesgo en crecimiento',
-      body: `${topGrowthTipo.tipo_delito} pasó de ${numberFmt.format(topGrowthTipo.total_desde)} a ${numberFmt.format(topGrowthTipo.total_hasta)} casos (${topGrowthTipo.growth_pct! >= 0 ? '+' : ''}${topGrowthTipo.growth_pct}%) entre ${filters.anioDesde} y ${filters.anioHasta}; ajustar coberturas y controles en consecuencia.`,
+      body: `${topGrowthTipo.tipo_delito} pasó de ${fmtNumber(topGrowthTipo.total_desde)} a ${fmtNumber(topGrowthTipo.total_hasta)} casos (${topGrowthTipo.growth_pct! >= 0 ? '+' : ''}${topGrowthTipo.growth_pct}%) entre ${filters.anioDesde} y ${filters.anioHasta}; ajustar coberturas y controles en consecuencia.`,
     })
   }
 
@@ -125,7 +124,7 @@ function buildActionPlan(
   if (!filters.entidad && topGrowthEntidad && topGrowthEntidad.entidad !== topTasaEntidad?.entidad) {
     secondary.push({
       title: 'Estado a vigilar',
-      body: `${topGrowthEntidad.entidad} registra el mayor incremento reciente en incidencia (${topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}${topGrowthEntidad.growth_pct}%, de ${numberFmt.format(topGrowthEntidad.total_desde)} a ${numberFmt.format(topGrowthEntidad.total_hasta)} casos); amerita seguimiento cercano aunque su tasa actual no sea la más alta.`,
+      body: `${topGrowthEntidad.entidad} registra el mayor incremento reciente en incidencia (${topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}${topGrowthEntidad.growth_pct}%, de ${fmtNumber(topGrowthEntidad.total_desde)} a ${fmtNumber(topGrowthEntidad.total_hasta)} casos); amerita seguimiento cercano aunque su tasa actual no sea la más alta.`,
     })
   } else if (filters.entidad && ownGrowth && Math.abs(ownGrowth.pct) >= 10) {
     const alza = ownGrowth.pct > 0
@@ -197,7 +196,7 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
         <li>
           {topGrowthTipo ? (
             <>
-              <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de {numberFmt.format(topGrowthTipo.total_desde)} a {numberFmt.format(topGrowthTipo.total_hasta)} casos ({topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%).
+              <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de {fmtNumber(topGrowthTipo.total_desde)} a {fmtNumber(topGrowthTipo.total_hasta)} casos ({topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%).
             </>
           ) : (
             'No se identificó un crecimiento sostenido por tipo de delito en el rango seleccionado.'
@@ -210,7 +209,7 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
           <li>
             {topGrowthEntidad ? (
               <>
-                <strong>{topGrowthEntidad.entidad}</strong> es el estado que más incrementó su incidencia delictiva ({topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}{topGrowthEntidad.growth_pct}%), de {numberFmt.format(topGrowthEntidad.total_desde)} a {numberFmt.format(topGrowthEntidad.total_hasta)} casos.
+                <strong>{topGrowthEntidad.entidad}</strong> es el estado que más incrementó su incidencia delictiva ({topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}{topGrowthEntidad.growth_pct}%), de {fmtNumber(topGrowthEntidad.total_desde)} a {fmtNumber(topGrowthEntidad.total_hasta)} casos.
               </>
             ) : (
               'No se identificó un incremento sostenido por estado en el rango seleccionado.'
@@ -219,7 +218,7 @@ export function Insights({ summary: rawSummary, filters, coverage }: Props) {
         )}
         {!filters.entidad && topTasaEntidad && (
           <li>
-            Ajustando por población, <strong>{topTasaEntidad.entidad}</strong> tiene la mayor tasa de incidencia del país: {tasaFmt(topTasaEntidad.tasa!)} delitos por cada 100,000 habitantes al año — un panorama distinto al de volumen bruto, donde dominan los estados más poblados.
+            Ajustando por población, <strong>{topTasaEntidad.entidad}</strong> tiene la mayor tasa de incidencia del país: {fmtDecimal(topTasaEntidad.tasa!)} delitos por cada 100,000 habitantes al año — un panorama distinto al de volumen bruto, donde dominan los estados más poblados.
           </li>
         )}
         {excluidos.length > 0 && (
