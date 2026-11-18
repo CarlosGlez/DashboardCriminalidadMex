@@ -24,3 +24,19 @@ export function paddedDomain(values: number[]): [number, number] {
   const step = 10 ** Math.max(0, Math.floor(Math.log10(Math.max(max - min, 1))) - 1)
   return [Math.max(0, Math.floor((min - pad) / step) * step), Math.ceil((max + pad) / step) * step]
 }
+
+/** Valor al final de las barras: 7.1 M, 2.4 M, 515k, 950. */
+export function fmtCompact(v: number): string {
+  const abs = Math.abs(v)
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} M`
+  if (abs >= 1_000) return `${Math.round(v / 1_000).toLocaleString('es-MX')}k`
+  return fmtNumber(Math.round(v))
+}
+
+/** Ejes en español: 160 mil, 1.2 M. */
+export function fmtMil(v: number): string {
+  const abs = Math.abs(v)
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} M`
+  if (abs >= 1_000) return `${(v / 1_000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} mil`
+  return fmtNumber(v)
+}

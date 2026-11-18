@@ -598,3 +598,182 @@
 .map-warning-detail {
   margin: 8px 0 0;
 }
+
+/* Ranking tipo tabla (Top municipios) */
+.rank-table {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rank-row {
+  flex: 1;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 28px minmax(150px, 1.5fr) minmax(70px, 1.5fr) 56px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.rank-row:nth-child(even) {
+  background: color-mix(in srgb, var(--border) 28%, transparent);
+}
+
+.rank-pos {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--accent);
+  text-align: right;
+}
+
+.rank-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 130%;
+}
+
+.rank-name strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rank-name small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rank-track {
+  height: 10px;
+  background: var(--track);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.rank-fill {
+  display: block;
+  height: 100%;
+  background: var(--bar-soft);
+  border-radius: 5px;
+}
+
+.rank-fill--top {
+  background: var(--bar-top);
+}
+
+.rank-value {
+  font-size: 12px;
+  text-align: right;
+  color: var(--text);
+}
+
+/* Selector de años (Comparativa año contra año) */
+.year-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.year-chips {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.year-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.year-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.year-chip-x {
+  font: inherit;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.year-chip-x:hover {
+  color: var(--text);
+}
+
+.year-add {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.year-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  width: 220px;
+  padding: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.year-menu-note {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.year-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.year-option {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 0;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.year-option--on {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.year-option:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

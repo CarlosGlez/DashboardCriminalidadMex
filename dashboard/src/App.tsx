@@ -8,19 +8,14 @@ import { FilterBar } from './components/FilterBar'
 import { KpiCards } from './components/KpiCards'
 import { TrendChart } from './components/TrendChart'
 import { RankingBarChart } from './components/RankingBarChart'
+import { RankingTable } from './components/RankingTable'
 import { YearComparisonChart } from './components/YearComparisonChart'
 import { Insights } from './components/Insights'
 import { fmtDecimal } from './utils/format'
-import { ENTIDAD_ABREV } from './constants'
-import type { CrimeSummary, Filters, MunicipioTotal } from './types'
+import type { CrimeSummary, Filters } from './types'
 
 // d3-geo y d3-scale solo se descargan cuando se muestra el mapa
 const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) => ({ default: m.ChoroplethMap })))
-
-// En el ranking nacional se agrega el estado (abreviado) para distinguir municipios con el mismo nombre.
-function municipioLabel(m: MunicipioTotal, dentroDeEstado: boolean) {
-  return dentroDeEstado ? m.municipio : `${m.municipio}, ${ENTIDAD_ABREV[m.entidad] ?? m.entidad}`
-}
 
 const TOP_TIPOS = 10
 const OTROS = 'Otros'
@@ -59,6 +54,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
               key: 'tasa',
               label: 'Por 100k hab.',
               valueLabel: 'Tasa por 100k',
+              formatLabel: (v: number) => fmtDecimal(v),
               rows: [...summary.tasa_by_entidad]
                 .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))
                 .map((e) => ({ label: e.entidad, value: e.tasa ?? 0 })),
@@ -71,14 +67,13 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
 
   const municipiosChart =
     !filters.municipio && summary.by_municipio.length > 0 ? (
-      <RankingBarChart
+      <RankingTable
         title={filters.entidad ? `Top municipios de ${filters.entidad}` : 'Top 15 municipios del país'}
-        labelWidth={270}
-        views={[{
-          key: 'total',
-          label: 'Total',
-          rows: summary.by_municipio.map((m) => ({ label: municipioLabel(m, !!filters.entidad), value: m.total })),
-        }]}
+        rows={summary.by_municipio.map((m) => ({
+          name: m.municipio,
+          sub: filters.entidad ? undefined : m.entidad,
+          value: m.total,
+        }))}
       />
     ) : null
 

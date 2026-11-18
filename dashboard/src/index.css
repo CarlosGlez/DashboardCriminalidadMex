@@ -13,6 +13,9 @@
   --bar: #44403C;
   --bar-muted: #B8AFA4;
   --warning: #B7791F;
+  --bar-soft: #C48C74;
+  --bar-top: #A8432C;
+  --track: #EDE4DA;
 
   /* Escala del mapa: más oscuro = más delitos */
   --map-1: #FBE9D9;
