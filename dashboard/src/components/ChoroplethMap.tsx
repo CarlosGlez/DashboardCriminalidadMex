@@ -43,6 +43,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
   const ramp = useSequentialColors()
   const [metric, setMetric] = useState<Metric>('total')
   const [hover, setHover] = useState<Shape | null>(null)
+  const [avisoAbierto, setAvisoAbierto] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const tipRef = useRef<HTMLDivElement>(null)
 
@@ -169,6 +170,27 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
   }
 
+  // Línea corta siempre visible; el detalle (avisos) se despliega con el botón
+  let avisoCorto = ''
+  if (porEstado) {
+    if (anomalos.length > 0) {
+      const nombres = anomalos.map((c) => c.entidad)
+      const lista = nombres.length > 6 ? `${nombres.slice(0, 6).join(', ')} y ${nombres.length - 6} más` : nombres.join(', ')
+      avisoCorto = `Datos incompletos o atípicos en ${nombres.length} ${nombres.length === 1 ? 'estado' : 'estados'} (${lista})`
+    }
+  } else {
+    const partes: string[] = []
+    if (anomalos[0]) {
+      partes.push(
+        `Datos incompletos o atípicos en ${filters.entidad} (${formatAnios(aniosAnomalosEn(anomalos[0], filters.anioDesde, filters.anioHasta))})`,
+      )
+    }
+    if (unlocated && unlocated.share >= MIN_WARNING_SHARE) {
+      partes.push(`${(unlocated.share * 100).toFixed(1)}% de los delitos sin municipio asignado`)
+    }
+    avisoCorto = partes.join(' · ')
+  }
+
   // ---- Interacción ----
   const select = (s: Shape) => {
     if (porEstado) {
@@ -259,7 +281,20 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
 
       {avisos.length > 0 && (
         <div className="map-warning" role="note">
-          <strong>Atención:</strong> {avisos.join(' ')}
+          <div className="map-warning-row">
+            <span>
+              <strong>Atención:</strong> {avisoCorto}
+            </span>
+            <button
+              type="button"
+              className="view-toggle-btn map-warning-btn"
+              aria-expanded={avisoAbierto}
+              onClick={() => setAvisoAbierto((v) => !v)}
+            >
+              {avisoAbierto ? 'Ocultar detalle' : porEstado ? 'Ver estados y años' : 'Ver detalle'}
+            </button>
+          </div>
+          {avisoAbierto && <p className="map-warning-detail">{avisos.join(' ')}</p>}
         </div>
       )}
       {avisos.length === 0 && unlocated && unlocated.total > 0 && (

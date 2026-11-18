@@ -15,6 +15,8 @@ interface View {
   label: string
   rows: Row[]
   formatValue?: (v: number) => string
+  /** Nombre del valor en el tooltip (por defecto "Delitos"). */
+  valueLabel?: string
 }
 
 interface Props {
@@ -23,14 +25,14 @@ interface Props {
   highlight?: string
   /** Etiqueta de la barra que se pinta en gris (p. ej. "Otros"). */
   mutedLabel?: string
+  /** Ancho (px) reservado para las etiquetas del eje Y; define cuántos caracteres caben antes de truncar. */
+  labelWidth?: number
 }
 
-const MAX_LABEL_CHARS = 26
-
 // Etiqueta del eje Y: se trunca con "…" (nombre completo en tooltip nativo) para que nunca se encime.
-function CategoryTick({ x, y, payload, fill }: { x?: number; y?: number; payload?: { value: string }; fill: string }) {
+function CategoryTick({ x, y, payload, fill, maxChars }: { x?: number; y?: number; payload?: { value: string }; fill: string; maxChars: number }) {
   const full = String(payload?.value ?? '')
-  const text = full.length > MAX_LABEL_CHARS ? `${full.slice(0, MAX_LABEL_CHARS - 1).trimEnd()}…` : full
+  const text = full.length > maxChars ? `${full.slice(0, maxChars - 1).trimEnd()}…` : full
   return (
     <text x={x} y={y} dy={4} textAnchor="end" fill={fill} fontSize={12}>
       <title>{full}</title>
@@ -41,7 +43,7 @@ function CategoryTick({ x, y, payload, fill }: { x?: number; y?: number; payload
 
 const defaultFormat = (v: number) => fmtNumber(v)
 
-export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) {
+export function RankingBarChart({ title, views, highlight, mutedLabel, labelWidth = 170 }: Props) {
   const colors = useChartColors()
   const [activeKey, setActiveKey] = useState(views[0]?.key)
   const active = views.find((v) => v.key === activeKey) ?? views[0]
@@ -80,10 +82,10 @@ export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) 
           <YAxis
             type="category"
             dataKey="label"
-            tick={<CategoryTick fill={colors.textSecondary} />}
+            tick={<CategoryTick fill={colors.textSecondary} maxChars={Math.floor(labelWidth / 6.4)} />}
             axisLine={false}
             tickLine={false}
-            width={170}
+            width={labelWidth}
             interval={0}
           />
           <Tooltip
@@ -92,7 +94,7 @@ export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) 
             labelStyle={{ color: colors.textSecondary }}
             cursor={{ fill: colors.gridline, opacity: 0.4 }}
           />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
+          <Bar dataKey="value" name={active?.valueLabel ?? 'Delitos'} radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
             {(active?.rows ?? []).map((r) => (
               <Cell
                 key={r.label}

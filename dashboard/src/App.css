@@ -31,8 +31,8 @@
 
 /* Filters */
 .filter-bar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
   gap: 16px;
   padding: 16px;
   background: var(--card);
@@ -46,7 +46,7 @@
   gap: 4px;
   font-size: 12px;
   color: var(--text-muted);
-  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .filter-field select {
@@ -500,10 +500,15 @@
   min-height: 92px;
 }
 
-/* Cajas de conclusiones: un solo estilo con acento sutil */
+/* Cajas de conclusiones: sin borde de color; solo la recomendación principal lleva acento terracota */
 .insights-list .insights-note,
-.action-plan-headline,
 .action-plan li {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.action-plan-headline {
   background: color-mix(in srgb, var(--accent) 6%, var(--card));
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
@@ -515,10 +520,66 @@
   border-left: 3px solid var(--accent);
 }
 
-/* Columna apilada (Delitos por tipo + Top municipios) */
-.chart-col {
+/* Filtros: periodo con Desde y Hasta juntos */
+.filter-period-selects {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.filter-period-selects select {
+  flex: 1;
   min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* KPI Total de delitos: tarjeta ancha con cifra grande */
+.stat-tile--wide {
+  grid-column: span 2;
+  justify-content: center;
+}
+
+.stat-value--hero {
+  font-size: 44px;
+  line-height: 110%;
+  color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .stat-tile--wide {
+    grid-column: span 1;
+  }
+}
+
+/* Aviso del mapa: línea corta + detalle desplegable */
+.map-warning-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.map-warning-btn {
+  flex: none;
+  border: 1px solid var(--warning);
+  color: var(--text);
+  background: var(--card);
+}
+
+.map-warning-detail {
+  margin: 8px 0 0;
 }

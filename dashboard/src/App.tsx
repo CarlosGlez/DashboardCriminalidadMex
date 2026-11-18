@@ -32,8 +32,7 @@ function topConOtros(tipos: { tipo_delito?: string | null; total: number }[]) {
   return resto > 0 ? [...rows, { label: OTROS, value: resto }] : rows
 }
 
-// Con un estado elegido no hay gráfica por estado: tipo y municipios van lado a lado.
-// Sin estado, los municipios se apilan bajo "Delitos por tipo" (columna izquierda) para no dejar hueco.
+// Delitos por estado (ancho completo, solo sin estado elegido); debajo, tipo y municipios lado a lado.
 function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: Filters }) {
   const tipoChart = (
     <RankingBarChart
@@ -47,6 +46,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
     <RankingBarChart
       title="Delitos por estado"
       highlight={filters.entidad ?? undefined}
+      labelWidth={240}
       views={[
         {
           key: 'total',
@@ -57,6 +57,7 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
           ? [{
               key: 'tasa',
               label: 'Por 100k hab.',
+              valueLabel: 'Tasa por 100k',
               rows: [...summary.tasa_by_entidad]
                 .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))
                 .map((e) => ({ label: e.entidad, value: e.tasa ?? 0 })),
@@ -80,22 +81,13 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
     ) : null
 
   return (
-    <div className="chart-grid">
-      {filters.entidad ? (
-        <>
-          {tipoChart}
-          {municipiosChart}
-        </>
-      ) : (
-        <>
-          <div className="chart-col">
-            {tipoChart}
-            {municipiosChart}
-          </div>
-          {estadoChart}
-        </>
-      )}
-    </div>
+    <>
+      {!filters.entidad && <div className="chart-grid chart-grid--single">{estadoChart}</div>}
+      <div className={municipiosChart ? 'chart-grid' : 'chart-grid chart-grid--single'}>
+        {tipoChart}
+        {municipiosChart}
+      </div>
+    </>
   )
 }
 
@@ -138,7 +130,7 @@ function App() {
       <header className="dashboard-header">
         <h1>Dashboard de Criminalidad</h1>
         <p className="dashboard-subtitle">
-          Incidencia delictiva del fuero común por estado y municipio, {options.anio_min}-{options.anio_max}. Fuente: SESNSP.
+          {options.anio_min}-{options.anio_max} · Fuente: SESNSP
         </p>
       </header>
 
@@ -162,11 +154,11 @@ function App() {
             <TrendChart trend={summary.trend} />
           </div>
 
-          <RankingCharts summary={summary} filters={filters} />
-
           <div className="chart-grid chart-grid--single">
             <YearComparisonChart trend={summary.trend} />
           </div>
+
+          <RankingCharts summary={summary} filters={filters} />
 
           <Insights summary={summary} filters={filters} coverage={coverage} />
         </>

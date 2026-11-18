@@ -52,9 +52,9 @@ export function KpiCards({ summary, filters, coverage }: Props) {
 
   return (
     <div className="kpi-row">
-      <div className="stat-tile stat-tile--accent">
+      <div className="stat-tile stat-tile--accent stat-tile--wide">
         <span className="stat-label">Total de delitos ({filters.anioDesde}-{filters.anioHasta})</span>
-        <span className="stat-value">{fmtNumber(summary.total)}</span>
+        <span className="stat-value stat-value--hero">{fmtNumber(summary.total)}</span>
       </div>
 
       {variacion !== null && (

@@ -14,35 +14,36 @@ export function FilterBar({ options, filters, onChange }: Props) {
 
   return (
     <div className="filter-bar" role="group" aria-label="Filtros del dashboard">
-      <label className="filter-field">
-        <span>Desde</span>
-        <select
-          value={filters.anioDesde}
-          onChange={(e) => {
-            const anioDesde = Number(e.target.value)
-            onChange({ ...filters, anioDesde, anioHasta: Math.max(anioDesde, filters.anioHasta) })
-          }}
-        >
-          {years.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-      </label>
-
-      <label className="filter-field">
-        <span>Hasta</span>
-        <select
-          value={filters.anioHasta}
-          onChange={(e) => {
-            const anioHasta = Number(e.target.value)
-            onChange({ ...filters, anioHasta, anioDesde: Math.min(anioHasta, filters.anioDesde) })
-          }}
-        >
-          {years.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-      </label>
+      <div className="filter-field filter-period" role="group" aria-label="Periodo">
+        <span>Periodo</span>
+        <div className="filter-period-selects">
+          <select
+            aria-label="Desde"
+            value={filters.anioDesde}
+            onChange={(e) => {
+              const anioDesde = Number(e.target.value)
+              onChange({ ...filters, anioDesde, anioHasta: Math.max(anioDesde, filters.anioHasta) })
+            }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <span aria-hidden="true">–</span>
+          <select
+            aria-label="Hasta"
+            value={filters.anioHasta}
+            onChange={(e) => {
+              const anioHasta = Number(e.target.value)
+              onChange({ ...filters, anioHasta, anioDesde: Math.min(anioHasta, filters.anioDesde) })
+            }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <label className="filter-field">
         <span>Estado</span>
