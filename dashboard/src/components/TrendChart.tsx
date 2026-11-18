@@ -2,6 +2,7 @@ import {
   CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import type { TrendPoint } from '../types'
+import { fmtNumber, fmtAxis } from '../utils/format'
 import { useChartColors } from '../theme'
 import { MESES_ABREV } from '../constants'
 
@@ -9,7 +10,6 @@ interface Props {
   trend: TrendPoint[]
 }
 
-const numberFmt = new Intl.NumberFormat('es-MX')
 
 export function TrendChart({ trend }: Props) {
   const colors = useChartColors()
@@ -37,9 +37,10 @@ export function TrendChart({ trend }: Props) {
             axisLine={false}
             tickLine={false}
             width={56}
+            tickFormatter={(v) => fmtAxis(Number(v))}
           />
           <Tooltip
-            formatter={(value) => numberFmt.format(Number(value))}
+            formatter={(value) => fmtNumber(Number(value))}
             contentStyle={{ background: colors.surface, border: `1px solid ${colors.gridline}`, color: colors.textPrimary }}
             labelStyle={{ color: colors.textSecondary }}
           />

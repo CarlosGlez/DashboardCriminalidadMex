@@ -3,6 +3,7 @@ import type { KeyboardEvent, MouseEvent } from 'react'
 import { geoConicConformal, geoPath } from 'd3-geo'
 import { scaleQuantile } from 'd3-scale'
 import { useGeo } from '../hooks/useGeo'
+import { fmtNumber, fmtDecimal, fmtAxis } from '../utils/format'
 import { useChartColors, useDarkMode, useSequentialColors } from '../theme'
 import type { CrimeSummary, EntGeoProps, Filters, MapMunicipioRow, MunGeoProps } from '../types'
 import { aniosAnomalosEn, coverageInScope, describir, formatAnios } from '../utils/coverage'
@@ -36,9 +37,6 @@ const H = 480
 const PAD = 6
 const MIN_WARNING_SHARE = 0.02 // desde 2% de delitos sin municipio se muestra como aviso
 
-const numberFmt = new Intl.NumberFormat('es-MX')
-const tasaFmt = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 })
-const compactFmt = new Intl.NumberFormat('es-MX', { notation: 'compact', maximumFractionDigits: 1 })
 
 export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }: Props) {
   const colors = useChartColors()
@@ -113,7 +111,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
   }, [shapes, ramp])
 
   const formatValue = (v: number) =>
-    activeMetric === 'tasa' ? `${tasaFmt.format(v)} por 100 mil hab.` : `${numberFmt.format(v)} delitos`
+    activeMetric === 'tasa' ? `${fmtDecimal(v)} por 100 mil hab.` : `${fmtNumber(v)} delitos`
 
   // ---- Delitos que el SESNSP no asigna a un municipio ("No especificado" / "Otros municipios") ----
   const unlocated = useMemo(() => {
@@ -166,7 +164,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
     if (unlocated && unlocated.share >= MIN_WARNING_SHARE) {
       avisos.push(
-        `${numberFmt.format(unlocated.total)} delitos (${(unlocated.share * 100).toFixed(1)}%) de ${filters.entidad} ` +
+        `${fmtNumber(unlocated.total)} delitos (${(unlocated.share * 100).toFixed(1)}%) de ${filters.entidad} ` +
           `no tienen municipio asignado en el SESNSP («No especificado» u «Otros municipios») y no aparecen en el mapa.`,
       )
     }
@@ -204,6 +202,8 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
     }
   }
 
+  // Borde claro: en modo oscuro los estados de color bajo se perdían contra el fondo
+  const borderColor = dark ? 'rgba(235, 235, 228, 0.75)' : colors.surface
   const selectedShape = !porEstado ? shapes.find((s) => s.key === filters.municipio) : undefined
 
   const title = porEstado
@@ -215,7 +215,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
 
   // Límites de las clases para la leyenda
   const thresholds = scale ? [scale.min, ...scale.q.quantiles(), scale.max] : []
-  const legendFmt = (v: number) => (activeMetric === 'tasa' ? tasaFmt.format(v) : compactFmt.format(v))
+  const legendFmt = (v: number) => (activeMetric === 'tasa' ? fmtDecimal(v) : fmtAxis(v))
   const legendTitle =
     activeMetric === 'tasa'
       ? 'Delitos por cada 100,000 habitantes (promedio anual del periodo)'
@@ -267,7 +267,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
       )}
       {avisos.length === 0 && unlocated && unlocated.total > 0 && (
         <p className="chart-note">
-          {numberFmt.format(unlocated.total)} delitos sin municipio asignado («No especificado» u «Otros municipios») no se
+          {fmtNumber(unlocated.total)} delitos sin municipio asignado («No especificado» u «Otros municipios») no se
           muestran en el mapa.
         </p>
       )}
@@ -293,7 +293,7 @@ export function ChoroplethMap({ summary, filters, mapData, coverage, onChange }:
               d={s.d}
               className={interactive(s) ? 'map-shape map-shape--clickable' : 'map-shape'}
               fill={scale && s.value !== null ? scale.q(s.value) : colors.gridline}
-              stroke={colors.surface}
+              stroke={borderColor}
               strokeWidth={porEstado ? 1 : 0.6}
               vectorEffect="non-scaling-stroke"
               onMouseEnter={(e) => {

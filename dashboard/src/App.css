@@ -442,3 +442,66 @@
   height: 10px;
   border-radius: 2px;
 }
+
+/* Aviso con tooltip (tarjetas KPI) */
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.warn-tip {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+  color: var(--critical);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.warn-tip:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.warn-tip-text {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: none;
+  width: 240px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 140%;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.warn-tip:hover .warn-tip-text,
+.warn-tip:focus .warn-tip-text {
+  display: block;
+}
+
+.kpi-row {
+  align-items: stretch;
+}
+
+.stat-tile {
+  min-height: 92px;
+}
+
+/* Cajas de conclusiones: un solo estilo con acento sutil */
+.insights-list .insights-note,
+.action-plan-headline,
+.action-plan li {
+  background: color-mix(in srgb, var(--series-1) 6%, var(--surface));
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--series-1);
+  border-radius: 6px;
+}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
+import { fmtNumber, fmtAxis } from '../utils/format'
 import { useChartColors } from '../theme'
 
 interface Row {
@@ -20,12 +21,27 @@ interface Props {
   title: string
   views: View[]
   highlight?: string
+  /** Etiqueta de la barra que se pinta en gris (p. ej. "Otros"). */
+  mutedLabel?: string
 }
 
-const numberFmt = new Intl.NumberFormat('es-MX')
-const defaultFormat = (v: number) => numberFmt.format(v)
+const MAX_LABEL_CHARS = 26
 
-export function RankingBarChart({ title, views, highlight }: Props) {
+// Etiqueta del eje Y: se trunca con "…" (nombre completo en tooltip nativo) para que nunca se encime.
+function CategoryTick({ x, y, payload, fill }: { x?: number; y?: number; payload?: { value: string }; fill: string }) {
+  const full = String(payload?.value ?? '')
+  const text = full.length > MAX_LABEL_CHARS ? `${full.slice(0, MAX_LABEL_CHARS - 1).trimEnd()}…` : full
+  return (
+    <text x={x} y={y} dy={4} textAnchor="end" fill={fill} fontSize={12}>
+      <title>{full}</title>
+      {text}
+    </text>
+  )
+}
+
+const defaultFormat = (v: number) => fmtNumber(v)
+
+export function RankingBarChart({ title, views, highlight, mutedLabel }: Props) {
   const colors = useChartColors()
   const [activeKey, setActiveKey] = useState(views[0]?.key)
   const active = views.find((v) => v.key === activeKey) ?? views[0]
@@ -59,15 +75,15 @@ export function RankingBarChart({ title, views, highlight }: Props) {
             tick={{ fill: colors.muted, fontSize: 12 }}
             axisLine={{ stroke: colors.baseline }}
             tickLine={false}
-            tickFormatter={(v) => format(Number(v))}
+            tickFormatter={(v) => fmtAxis(Number(v))}
           />
           <YAxis
             type="category"
             dataKey="label"
-            tick={{ fill: colors.textSecondary, fontSize: 12 }}
+            tick={<CategoryTick fill={colors.textSecondary} />}
             axisLine={false}
             tickLine={false}
-            width={160}
+            width={170}
             interval={0}
           />
           <Tooltip
@@ -78,7 +94,10 @@ export function RankingBarChart({ title, views, highlight }: Props) {
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
             {(active?.rows ?? []).map((r) => (
-              <Cell key={r.label} fill={r.label === highlight ? colors.critical : colors.series1} />
+              <Cell
+                key={r.label}
+                fill={r.label === highlight ? colors.critical : r.label === mutedLabel ? colors.baseline : colors.series1}
+              />
             ))}
           </Bar>
         </BarChart>

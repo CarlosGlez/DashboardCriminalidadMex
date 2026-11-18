@@ -10,6 +10,7 @@ import { TrendChart } from './components/TrendChart'
 import { RankingBarChart } from './components/RankingBarChart'
 import { YearComparisonChart } from './components/YearComparisonChart'
 import { Insights } from './components/Insights'
+import { fmtDecimal } from './utils/format'
 import type { Filters, MunicipioTotal } from './types'
 
 // d3-geo y d3-scale solo se descargan cuando se muestra el mapa
@@ -18,6 +19,17 @@ const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) =
 // En el ranking nacional se agrega el estado para distinguir municipios con el mismo nombre.
 function municipioLabel(m: MunicipioTotal, dentroDeEstado: boolean) {
   return dentroDeEstado ? m.municipio : `${m.municipio} (${m.entidad})`
+}
+
+const TOP_TIPOS = 10
+const OTROS = 'Otros'
+
+// Top 10 tipos de delito; el resto se agrupa en una sola barra "Otros".
+function topConOtros(tipos: { tipo_delito?: string | null; total: number }[]) {
+  const sorted = [...tipos].sort((a, b) => b.total - a.total)
+  const rows = sorted.slice(0, TOP_TIPOS).map((t) => ({ label: t.tipo_delito ?? '', value: t.total }))
+  const resto = sorted.slice(TOP_TIPOS).reduce((acc, t) => acc + t.total, 0)
+  return resto > 0 ? [...rows, { label: OTROS, value: resto }] : rows
 }
 
 function App() {
@@ -89,13 +101,14 @@ function App() {
               views={[{
                 key: 'total',
                 label: 'Total',
-                rows: summary.by_tipo.map((t) => ({ label: t.tipo_delito ?? '', value: t.total })),
+                rows: topConOtros(summary.by_tipo),
               }]}
+              mutedLabel={OTROS}
             />
             {!filters.entidad && (
               <RankingBarChart
                 title="Delitos por estado"
-                highlight={summary.by_entidad[0]?.entidad}
+                highlight={filters.entidad ?? undefined}
                 views={[
                   {
                     key: 'total',
@@ -109,7 +122,7 @@ function App() {
                         rows: [...summary.tasa_by_entidad]
                           .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))
                           .map((e) => ({ label: e.entidad, value: e.tasa ?? 0 })),
-                        formatValue: (v: number) => v.toLocaleString('es-MX', { maximumFractionDigits: 1 }),
+                        formatValue: (v: number) => fmtDecimal(v),
                       }]
                     : []),
                 ]}

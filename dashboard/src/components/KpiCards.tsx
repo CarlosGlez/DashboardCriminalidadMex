@@ -1,3 +1,4 @@
+import { fmtNumber, fmtDecimal } from '../utils/format'
 import type { CrimeSummary, Filters } from '../types'
 import { aniosAnomalosEn, coverageInScope, describir } from '../utils/coverage'
 import type { CoverageMap } from '../utils/coverage'
@@ -8,7 +9,15 @@ interface Props {
   coverage: CoverageMap
 }
 
-const numberFmt = new Intl.NumberFormat('es-MX')
+
+function WarnTip({ text }: { text: string }) {
+  return (
+    <span className="warn-tip" tabIndex={0} role="img" aria-label={`Advertencia: ${text}`}>
+      <span aria-hidden="true">⚠</span>
+      <span className="warn-tip-text" role="tooltip">{text}</span>
+    </span>
+  )
+}
 
 export function KpiCards({ summary, filters, coverage }: Props) {
   const variacion =
@@ -45,49 +54,49 @@ export function KpiCards({ summary, filters, coverage }: Props) {
     <div className="kpi-row">
       <div className="stat-tile">
         <span className="stat-label">Total de delitos ({filters.anioDesde}-{filters.anioHasta})</span>
-        <span className="stat-value">{numberFmt.format(summary.total)}</span>
+        <span className="stat-value">{fmtNumber(summary.total)}</span>
       </div>
 
-      <div className="stat-tile">
-        <span className="stat-label">Variación vs. periodo anterior ({prevDesde}-{prevHasta})</span>
-        {variacion === null ? (
-          <span className="stat-value stat-value--muted">Sin datos previos</span>
-        ) : (
+      {variacion !== null && (
+        <div className="stat-tile">
+          <span className="stat-label">
+            Variación vs. periodo anterior ({prevDesde}-{prevHasta})
+            {incompletos.length > 0 && (
+              <WarnTip text={`Ojo: incluye años atípicos o incompletos: ${describir(incompletos, prevDesde, filters.anioHasta)}.`} />
+            )}
+          </span>
           <span className={`stat-value stat-delta ${variacion >= 0 ? 'stat-delta--up' : 'stat-delta--down'}`}>
             <span aria-hidden="true">{variacion >= 0 ? '▲' : '▼'}</span>
             {Math.abs(variacion).toFixed(1)}%
             <span className="stat-delta-label">{variacion >= 0 ? 'aumento' : 'disminución'}</span>
           </span>
-        )}
-        {incompletos.length > 0 && (
-          <span className="stat-sub">
-            Ojo: incluye años atípicos o incompletos: {describir(incompletos, prevDesde, filters.anioHasta)}.
-          </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="stat-tile">
         <span className="stat-label">Delito más frecuente</span>
         <span className="stat-value stat-value--text">{topTipo?.tipo_delito ?? 'Sin datos'}</span>
-        {topTipo && <span className="stat-sub">{numberFmt.format(topTipo.total)} casos</span>}
+        {topTipo && <span className="stat-sub">{fmtNumber(topTipo.total)} casos</span>}
       </div>
 
       <div className="stat-tile">
         <span className="stat-label">Promedio mensual</span>
-        <span className="stat-value">{numberFmt.format(Math.round(promedioMensual))}</span>
+        <span className="stat-value">{fmtNumber(Math.round(promedioMensual))}</span>
       </div>
 
       <div className="stat-tile">
-        <span className="stat-label">Tasa anual por 100k habitantes</span>
+        <span className="stat-label">
+          Tasa anual por 100k habitantes
+          {incompletosTasa.length > 0 && (
+            <WarnTip
+              text={`Ojo: el promedio incluye años atípicos o incompletos: ${describir(incompletosTasa, filters.anioDesde, filters.anioHasta)}.`}
+            />
+          )}
+        </span>
         {summary.tasa_100k === null ? (
           <span className="stat-value stat-value--muted">Sin datos de población</span>
         ) : (
-          <span className="stat-value">{summary.tasa_100k.toLocaleString('es-MX', { maximumFractionDigits: 1 })}</span>
-        )}
-        {incompletosTasa.length > 0 && (
-          <span className="stat-sub">
-            Ojo: el promedio incluye años atípicos o incompletos: {describir(incompletosTasa, filters.anioDesde, filters.anioHasta)}.
-          </span>
+          <span className="stat-value">{fmtDecimal(summary.tasa_100k)}</span>
         )}
       </div>
     </div>
