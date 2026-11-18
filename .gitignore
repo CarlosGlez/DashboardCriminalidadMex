@@ -2,3 +2,8 @@
 # Datasets CSV
 crimes_municipal.csv
 Municipal-Delitos*.csv
+
+# Población (CONAPO): archivos generados por scripts/prepare_poblacion.py
+entidades.csv
+poblacion_estatal.csv
+poblacion_estatal.sql
