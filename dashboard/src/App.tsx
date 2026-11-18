@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import './App.css'
 import { useFilterOptions } from './hooks/useFilterOptions'
 import { useCrimeSummary } from './hooks/useCrimeSummary'
+import { useMapMunicipios } from './hooks/useMapMunicipios'
+import { useCoverage } from './hooks/useCoverage'
 import { FilterBar } from './components/FilterBar'
 import { KpiCards } from './components/KpiCards'
 import { TrendChart } from './components/TrendChart'
@@ -9,6 +11,9 @@ import { RankingBarChart } from './components/RankingBarChart'
 import { YearComparisonChart } from './components/YearComparisonChart'
 import { Insights } from './components/Insights'
 import type { Filters, MunicipioTotal } from './types'
+
+// d3-geo y d3-scale solo se descargan cuando se muestra el mapa
+const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) => ({ default: m.ChoroplethMap })))
 
 // En el ranking nacional se agrega el estado para distinguir municipios con el mismo nombre.
 function municipioLabel(m: MunicipioTotal, dentroDeEstado: boolean) {
@@ -36,6 +41,11 @@ function App() {
     filters ?? { anioDesde: 0, anioHasta: 0, entidad: null, municipio: null, municipioNombre: null, tipoDelito: null },
   )
 
+  // Totales de todos los municipios del estado elegido; se pide en paralelo a crime_summary
+  const mapData = useMapMunicipios(filters)
+  // Estados/años con desglose municipal incompleto (avisos y exclusiones en mapa, KPIs e Insights)
+  const coverage = useCoverage()
+
   if (optionsError) {
     return <div className="state-message state-message--error">Error cargando opciones: {optionsError}</div>
   }
@@ -61,7 +71,13 @@ function App() {
 
       {summary && (
         <>
-          <KpiCards summary={summary} filters={filters} />
+          <KpiCards summary={summary} filters={filters} coverage={coverage} />
+
+          <div className="chart-grid chart-grid--single">
+            <Suspense fallback={<div className="state-message">Cargando mapa...</div>}>
+              <ChoroplethMap summary={summary} filters={filters} mapData={mapData} coverage={coverage} onChange={setFilters} />
+            </Suspense>
+          </div>
 
           <div className="chart-grid chart-grid--single">
             <TrendChart trend={summary.trend} />
@@ -119,7 +135,7 @@ function App() {
             <YearComparisonChart trend={summary.trend} />
           </div>
 
-          <Insights summary={summary} filters={filters} />
+          <Insights summary={summary} filters={filters} coverage={coverage} />
         </>
       )}
     </div>

@@ -7,3 +7,21 @@ Municipal-Delitos*.csv
 entidades.csv
 poblacion_estatal.csv
 poblacion_estatal.sql
+
+# Mapa: geometrías originales/intermedias de INEGI (solo se versionan los
+# .topo.json finales de dashboard/public/geo/)
+geo_raw/
+geo_tmp/
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.sbn
+*.sbx
+
+# Capturas y logs de pruebas en el navegador (Playwright MCP)
+.playwright-mcp/
+
+# Resultados de consultas de verificación corridas a mano en Supabase
+verif_*.csv

@@ -1,9 +1,14 @@
 import type { CrimeSummary, Filters } from '../types'
 import { MESES } from '../constants'
+import {
+  aniosAnomalosEn, coverageInScope, describir, excluyeCrecimiento, motivoExclusion, tocaExtremos,
+} from '../utils/coverage'
+import type { CoverageMap } from '../utils/coverage'
 
 interface Props {
   summary: CrimeSummary
   filters: Filters
+  coverage: CoverageMap
 }
 
 const numberFmt = new Intl.NumberFormat('es-MX')
@@ -32,9 +37,12 @@ function monthBefore(monthIdx: number) {
 
 // Crecimiento del propio recorte activo (respeta los filtros de estado/tipo, a
 // diferencia de tipo_growth/entidad_growth que comparan entre categorías).
-function ownScopeGrowth(trend: CrimeSummary['trend']) {
+// desdeAnio: se ignoran los años anteriores (datos municipales incompletos del estado, ver data_coverage).
+function ownScopeGrowth(trend: CrimeSummary['trend'], desdeAnio = 0) {
   if (trend.length === 0) return null
-  const years = Array.from(new Set(trend.map((p) => p.anio))).sort((a, b) => a - b)
+  const years = Array.from(new Set(trend.map((p) => p.anio)))
+    .filter((y) => y >= desdeAnio)
+    .sort((a, b) => a - b)
   if (years.length < 2) return null
   const firstYear = years[0]
   const lastYear = years[years.length - 1]
@@ -42,7 +50,8 @@ function ownScopeGrowth(trend: CrimeSummary['trend']) {
   const totalLast = trend.filter((p) => p.anio === lastYear).reduce((a, p) => a + p.total, 0)
   if (totalFirst === 0) return null
   const pct = ((totalLast - totalFirst) / totalFirst) * 100
-  return { firstYear, lastYear, totalFirst, totalLast, pct }
+  const omitidoDesde = trend.some((p) => p.anio < firstYear) ? firstYear : null
+  return { firstYear, lastYear, totalFirst, totalLast, pct, omitidoDesde }
 }
 
 interface ActionItem {
@@ -50,11 +59,27 @@ interface ActionItem {
   body: string
 }
 
-function buildActionPlan(summary: CrimeSummary, filters: Filters): { headline: ActionItem; secondary: ActionItem[] } {
+// `summary.entidad_growth` ya debe venir sin los estados con años anómalos (lo hace Insights).
+function buildActionPlan(
+  summary: CrimeSummary,
+  filters: Filters,
+  coverage: CoverageMap,
+): { headline: ActionItem; secondary: ActionItem[] } {
   const topGrowthTipo = summary.tipo_growth.find((g) => g.growth_pct !== null && g.growth_pct > 0)
   const topGrowthEntidad = summary.entidad_growth.find((g) => g.growth_pct !== null && g.growth_pct > 0)
   const { peakMonth, peakMonthIdx, liftPct } = seasonalityPeak(summary.trend)
-  const ownGrowth = ownScopeGrowth(summary.trend)
+  // Con un estado elegido, la tendencia propia solo se calcula sobre años comparables:
+  //  - 'arranque': desde su primer año completo.
+  //  - 'inestable' (cualquier año anómalo en el rango) o 'puntual' (primer/último año anómalo): no se calcula.
+  const covEntidad = filters.entidad ? coverage.get(filters.entidad) : undefined
+  const anomaloEnRango = !!covEntidad && aniosAnomalosEn(covEntidad, filters.anioDesde, filters.anioHasta).length > 0
+  const tendenciaNoComparable =
+    !!covEntidad &&
+    anomaloEnRango &&
+    covEntidad.tipo !== 'arranque' &&
+    excluyeCrecimiento(covEntidad, filters.anioDesde, filters.anioHasta)
+  const desdeCompleto = covEntidad?.tipo === 'arranque' && anomaloEnRango ? (covEntidad.anio_completo_desde ?? 0) : 0
+  const ownGrowth = tendenciaNoComparable ? null : ownScopeGrowth(summary.trend, desdeCompleto)
   const topTipoLabel = topGrowthTipo?.tipo_delito ?? summary.by_tipo[0]?.tipo_delito ?? 'el delito más frecuente'
   const anticipo = monthBefore(peakMonthIdx)
   const periodoHistorico = `histórico ${filters.anioDesde}-${filters.anioHasta}`
@@ -106,7 +131,7 @@ function buildActionPlan(summary: CrimeSummary, filters: Filters): { headline: A
     const alza = ownGrowth.pct > 0
     secondary.push({
       title: 'Tendencia a vigilar',
-      body: `La incidencia en ${alcance} muestra una tendencia ${alza ? 'al alza' : 'a la baja'} (${ownGrowth.pct >= 0 ? '+' : ''}${ownGrowth.pct.toFixed(0)}% entre ${ownGrowth.firstYear} y ${ownGrowth.lastYear}); ${alza ? 'conviene anticipar mayor demanda de cobertura' : 'el riesgo parece estar cediendo, lo que abre espacio para optimizar reservas destinadas a este mercado'}.`,
+      body: `La incidencia en ${alcance} muestra una tendencia ${alza ? 'al alza' : 'a la baja'} (${ownGrowth.pct >= 0 ? '+' : ''}${ownGrowth.pct.toFixed(0)}% entre ${ownGrowth.firstYear} y ${ownGrowth.lastYear}${ownGrowth.omitidoDesde ? `; se omiten los años anteriores a ${ownGrowth.omitidoDesde} por datos municipales incompletos` : ''}); ${alza ? 'conviene anticipar mayor demanda de cobertura' : 'el riesgo parece estar cediendo, lo que abre espacio para optimizar reservas destinadas a este mercado'}.`,
     })
   }
 
@@ -119,7 +144,42 @@ function buildActionPlan(summary: CrimeSummary, filters: Filters): { headline: A
   return { headline, secondary }
 }
 
-export function Insights({ summary, filters }: Props) {
+export function Insights({ summary: rawSummary, filters, coverage }: Props) {
+  // Cobertura de datos (data_coverage): entidad_growth y tipo_growth comparan solo el primer y el
+  // último año del rango. Si uno de esos años es anómalo para un estado (p. ej. Oaxaca 2015 → +378%),
+  // el crecimiento sale distorsionado, así que esos estados se excluyen del ranking de estados.
+  // Las series 'inestables' (cambios bruscos de reporte) se excluyen si el rango incluye cualquier año anómalo.
+  const { anioDesde, anioHasta } = filters
+  const span = anioHasta - anioDesde + 1
+  const prevDesde = anioDesde - span
+  const enAlcance = coverageInScope(coverage, filters.entidad)
+  const excluidos = filters.entidad ? [] : enAlcance.filter((c) => excluyeCrecimiento(c, anioDesde, anioHasta))
+  const summary: CrimeSummary =
+    excluidos.length > 0
+      ? {
+          ...rawSummary,
+          entidad_growth: rawSummary.entidad_growth.filter((g) => !excluidos.some((c) => c.entidad === g.entidad)),
+        }
+      : rawSummary
+  // Notas: crecimiento por tipo (extremos del rango), variación vs periodo anterior (rango + anterior)
+  // y tasa por 100k (promedio del rango: un año anómalo la distorsiona y con ella el lugar en el ranking)
+  const afectaTipo = enAlcance.some((c) => tocaExtremos(c, anioDesde, anioHasta))
+  const hayPrevio = rawSummary.prev_total > 0 // sin datos previos no hay variación que distorsionar
+  const afectaVariacion = hayPrevio && enAlcance.some((c) => aniosAnomalosEn(c, prevDesde, anioHasta).length > 0)
+  const afectaTasa =
+    rawSummary.tasa_by_entidad.length > 0 &&
+    enAlcance.some((c) => aniosAnomalosEn(c, anioDesde, anioHasta).length > 0)
+  const afectadosNota = enAlcance.filter(
+    (c) => aniosAnomalosEn(c, hayPrevio ? prevDesde : anioDesde, anioHasta).length > 0,
+  )
+  const consecuencias = [
+    afectaTipo && `el crecimiento por tipo de delito (compara ${anioDesde} contra ${anioHasta})`,
+    afectaVariacion && `la variación frente al periodo anterior (${prevDesde}-${anioDesde - 1})`,
+    afectaTasa && 'la tasa por 100,000 habitantes (y con ella el lugar en el ranking)',
+  ].filter(Boolean) as string[]
+  const unirY = (items: string[]) =>
+    items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`
+
   const topGrowthTipo = summary.tipo_growth.find((g) => g.growth_pct !== null && g.growth_pct > 0)
   const topGrowthEntidad = summary.entidad_growth.find((g) => g.growth_pct !== null && g.growth_pct > 0)
   const { peakMonth, liftPct } = seasonalityPeak(summary.trend)
@@ -128,7 +188,7 @@ export function Insights({ summary, filters }: Props) {
     .filter((e) => e.tasa !== null)
     .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))[0]
 
-  const { headline, secondary } = buildActionPlan(summary, filters)
+  const { headline, secondary } = buildActionPlan(summary, filters, coverage)
 
   return (
     <div className="insights-card">
@@ -160,6 +220,17 @@ export function Insights({ summary, filters }: Props) {
         {!filters.entidad && topTasaEntidad && (
           <li>
             Ajustando por población, <strong>{topTasaEntidad.entidad}</strong> tiene la mayor tasa de incidencia del país: {tasaFmt(topTasaEntidad.tasa!)} delitos por cada 100,000 habitantes al año — un panorama distinto al de volumen bruto, donde dominan los estados más poblados.
+          </li>
+        )}
+        {excluidos.length > 0 && (
+          <li className="insights-note">
+            <strong>Excluido de la comparación de crecimiento por estado:</strong>{' '}
+            {excluidos.map(motivoExclusion).join('; ')}. Compararlos distorsionaría el crecimiento.
+          </li>
+        )}
+        {consecuencias.length > 0 && (
+          <li className="insights-note">
+            <strong>Datos atípicos o incompletos:</strong> {describir(afectadosNota, hayPrevio ? prevDesde : anioDesde, anioHasta)}. En esos años el total no es comparable con el resto de la serie (puede estar por debajo o por encima de lo real), así que {unirY(consecuencias)} {consecuencias.length > 1 ? 'pueden' : 'puede'} verse distorsionado{consecuencias.length > 1 ? 's' : ''}{!filters.entidad ? ' (los totales nacionales incluyen a esos estados)' : ''}.
           </li>
         )}
       </ul>

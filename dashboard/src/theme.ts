@@ -45,6 +45,18 @@ export const palette = {
   },
 }
 
+// Rampa secuencial de un solo tono (7 clases) para mapas coropléticos.
+// Claro: de menos a más oscuro. Oscuro: de menos a más brillante sobre fondo oscuro.
+export const sequential = {
+  light: ['#e6effa', '#c2d9f3', '#98bfea', '#6ca2de', '#3f83d0', '#2a63aa', '#1d4a82'],
+  dark: ['#2b3f5c', '#2d4f7c', '#2f629f', '#3377bd', '#3987e5', '#6aa5ee', '#9cc3f5'],
+}
+
+export function useSequentialColors() {
+  const dark = useDarkMode()
+  return dark ? sequential.dark : sequential.light
+}
+
 export function useChartColors() {
   const dark = useDarkMode()
   return dark ? palette.dark : palette.light
