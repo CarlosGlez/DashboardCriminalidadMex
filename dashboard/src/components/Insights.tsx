@@ -25,6 +25,17 @@ function conBaseMinima<T extends { total_desde: number }>(rows: T[], totalAnioIn
   return rows.filter((g) => g.total_desde >= base)
 }
 
+// Con estado elegido, tipo_growth compara el año inicial contra el final: si alguno es atípico para el
+// estado (incompleto o con cambio de reporte), el crecimiento por tipo sale distorsionado y no se calcula.
+function notaTipoNoComparable(filters: Filters, coverage: CoverageMap): string | null {
+  if (!filters.entidad) return null
+  const c = coverage.get(filters.entidad)
+  if (!c || !tocaExtremos(c, filters.anioDesde, filters.anioHasta)) return null
+  const anio = c.anios_anomalos.includes(filters.anioDesde) ? filters.anioDesde : filters.anioHasta
+  const sugerencia = c.anio_completo_desde !== null ? `; prueba con un periodo desde ${c.anio_completo_desde}` : ''
+  return `No se calcula el crecimiento por tipo porque ${anio} es un año atípico o incompleto en ${filters.entidad}${sugerencia}.`
+}
+
 function seasonalityPeak(trend: CrimeSummary['trend']) {
   const totals = new Array(12).fill(0)
   const counts = new Array(12).fill(0)
@@ -81,6 +92,7 @@ function buildActionPlan(
   summary: CrimeSummary,
   filters: Filters,
   coverage: CoverageMap,
+  notaTipo: string | null,
 ): { headline: ActionItem; secondary: ActionItem[] } {
   const topGrowthTipo = summary.tipo_growth.find((g) => g.growth_pct !== null && g.growth_pct > 0)
   const topGrowthEntidad = summary.entidad_growth.find((g) => g.growth_pct !== null && g.growth_pct > 0)
@@ -131,7 +143,9 @@ function buildActionPlan(
   const secondary: ActionItem[] = []
 
   // Categoría de riesgo (detalle de soporte, ya no compite con el encabezado)
-  if (topGrowthTipo) {
+  if (notaTipo) {
+    secondary.push({ title: 'Crecimiento por tipo', body: notaTipo })
+  } else if (topGrowthTipo) {
     secondary.push({
       title: 'Delito en crecimiento',
       body: `${topGrowthTipo.tipo_delito} pasó de ${fmtNumber(topGrowthTipo.total_desde)} a ${fmtNumber(topGrowthTipo.total_hasta)} casos (${topGrowthTipo.growth_pct! >= 0 ? '+' : ''}${topGrowthTipo.growth_pct}%) entre ${filters.anioDesde} y ${filters.anioHasta}; conviene reforzar las acciones de prevención y vigilancia contra este delito.`,
@@ -171,11 +185,12 @@ export function Insights({ summary: rawSummary, filters, coverage, anioMin }: Pr
   const prevDesde = anioDesde - span
   const enAlcance = coverageInScope(coverage, filters.entidad)
   const excluidos = filters.entidad ? [] : enAlcance.filter((c) => excluyeCrecimiento(c, anioDesde, anioHasta))
+  const notaTipo = notaTipoNoComparable(filters, coverage)
   // Total del año inicial del alcance activo (misma base que tipo_growth y entidad_growth)
   const totalAnioInicial = rawSummary.trend.filter((p) => p.anio === anioDesde).reduce((a, p) => a + p.total, 0)
   const summary: CrimeSummary = {
     ...rawSummary,
-    tipo_growth: conBaseMinima(rawSummary.tipo_growth, totalAnioInicial),
+    tipo_growth: notaTipo ? [] : conBaseMinima(rawSummary.tipo_growth, totalAnioInicial),
     entidad_growth: conBaseMinima(
       excluidos.length > 0
         ? rawSummary.entidad_growth.filter((g) => !excluidos.some((c) => c.entidad === g.entidad))
@@ -210,12 +225,13 @@ export function Insights({ summary: rawSummary, filters, coverage, anioMin }: Pr
     .filter((e) => e.tasa !== null)
     .sort((a, b) => (b.tasa ?? 0) - (a.tasa ?? 0))[0]
 
-  const { headline, secondary } = buildActionPlan(summary, filters, coverage)
+  const { headline, secondary } = buildActionPlan(summary, filters, coverage, notaTipo)
 
   return (
     <div className="insights-card">
       <h3>Interpretación y conclusiones</h3>
       <ul className="insights-list">
+        {notaTipo && <li className="insights-note">{notaTipo}</li>}
         {topGrowthTipo && (
           <li>
             <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de <strong>{fmtNumber(topGrowthTipo.total_desde)}</strong> a <strong>{fmtNumber(topGrowthTipo.total_hasta)}</strong> casos (<strong>{topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%</strong>).
