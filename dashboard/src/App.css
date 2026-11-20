@@ -816,3 +816,226 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Letrero de contexto (bajo los filtros) */
+.analysis-context {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+}
+
+.analysis-context-kicker {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Aviso ⚠ junto a un título: el globo se ancla al título */
+.warn-anchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.warn-anchor--left .warn-tip-text {
+  left: 0;
+  right: auto;
+}
+
+.chart-note--empty {
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* Comparativa año contra año: resumen y tooltip */
+.yc-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.yc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.yc-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.yc-card-delta {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.yc-card-note {
+  font-size: 13px;
+  color: var(--warning);
+}
+
+.yc-tooltip {
+  min-width: 190px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.yc-tooltip-title {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+}
+
+.yc-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.yc-tooltip-row strong {
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+.yc-tooltip-delta {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.yc-tooltip-delta .stat-delta {
+  display: inline-flex;
+  font-weight: 600;
+}
+
+/* Tabla comparativa de municipios */
+.mt-scroll {
+  overflow-x: auto;
+}
+
+.mt-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.mt-table th,
+.mt-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.mt-table thead th {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mt-table .mt-num {
+  text-align: right;
+}
+
+.mt-table .mt-check {
+  text-align: center;
+  width: 84px;
+}
+
+.mt-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mt-sort {
+  font: inherit;
+  color: inherit;
+  font-weight: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.mt-sort:hover {
+  color: var(--text);
+}
+
+.mt-row--selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.mt-more {
+  margin-top: 10px;
+}
+
+/* Dona de delitos por tipo */
+.pie-body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  flex: 1;
+}
+
+.pie-chart {
+  flex: 1 1 200px;
+  height: 260px;
+  min-width: 0;
+}
+
+.pie-legend {
+  flex: 1 1 200px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.pie-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pie-legend-name {
+  min-width: 0;
+}
+
+.pie-legend-row strong {
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+/* Los hijos del grid pueden encogerse (la tabla desplaza dentro de su contenedor) */
+.chart-grid > * {
+  min-width: 0;
+}
+
+.chart-card {
+  min-width: 0;
+}
