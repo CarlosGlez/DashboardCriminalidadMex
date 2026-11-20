@@ -119,7 +119,7 @@ function buildActionPlan(
     const distintoLider = topGrowthEntidad && topGrowthEntidad.entidad !== topTasaEntidad.entidad
     headline = {
       title: 'Prioridad #1',
-      body: `Concentrar recursos en ${topTasaEntidad.entidad} (mayor tasa de incidencia del país: ${fmtDecimal(topTasaEntidad.tasa!)} por cada 100,000 habitantes), con foco en ${topTipoLabel.toLowerCase()}. Conviene anticipar esa capacidad desde ${anticipo.toLowerCase()}, ya que ${peakMonth.toLowerCase()} concentra cada año, en promedio, ${liftPct.toFixed(0)}% más casos que el resto (${periodoHistorico}; es un patrón recurrente, no un pico ya ocurrido).${distintoLider ? ` Al mismo tiempo, vigilar a ${topGrowthEntidad!.entidad}: aunque hoy tiene menor tasa, es el estado que más rápido está creciendo (${topGrowthEntidad!.growth_pct! >= 0 ? '+' : ''}${topGrowthEntidad!.growth_pct}%) y podría volverse la siguiente prioridad.` : ''}`,
+      body: `Concentrar recursos en ${topTasaEntidad.entidad} (mayor tasa de incidencia del país: ${fmtDecimal(topTasaEntidad.tasa!)} por cada 100,000 habitantes), con foco en ${topTipoLabel.toLowerCase()}. Conviene anticipar ese despliegue operativo desde ${anticipo.toLowerCase()}, ya que ${peakMonth.toLowerCase()} concentra cada año, en promedio, ${liftPct.toFixed(0)}% más casos que el resto (${periodoHistorico}; es un patrón recurrente, no un pico ya ocurrido).${distintoLider ? ` Al mismo tiempo, vigilar a ${topGrowthEntidad!.entidad}: aunque hoy tiene menor tasa, es el estado que más rápido está creciendo (${topGrowthEntidad!.growth_pct! >= 0 ? '+' : ''}${topGrowthEntidad!.growth_pct}%) y podría volverse la siguiente prioridad.` : ''}`,
     }
   } else {
     headline = {
@@ -133,8 +133,8 @@ function buildActionPlan(
   // Categoría de riesgo (detalle de soporte, ya no compite con el encabezado)
   if (topGrowthTipo) {
     secondary.push({
-      title: 'Categoría de riesgo en crecimiento',
-      body: `${topGrowthTipo.tipo_delito} pasó de ${fmtNumber(topGrowthTipo.total_desde)} a ${fmtNumber(topGrowthTipo.total_hasta)} casos (${topGrowthTipo.growth_pct! >= 0 ? '+' : ''}${topGrowthTipo.growth_pct}%) entre ${filters.anioDesde} y ${filters.anioHasta}; ajustar coberturas y controles en consecuencia.`,
+      title: 'Delito en crecimiento',
+      body: `${topGrowthTipo.tipo_delito} pasó de ${fmtNumber(topGrowthTipo.total_desde)} a ${fmtNumber(topGrowthTipo.total_hasta)} casos (${topGrowthTipo.growth_pct! >= 0 ? '+' : ''}${topGrowthTipo.growth_pct}%) entre ${filters.anioDesde} y ${filters.anioHasta}; conviene reforzar las acciones de prevención y vigilancia contra este delito.`,
     })
   }
 
@@ -148,7 +148,7 @@ function buildActionPlan(
     const alza = ownGrowth.pct > 0
     secondary.push({
       title: 'Tendencia a vigilar',
-      body: `La incidencia en ${alcance} muestra una tendencia ${alza ? 'al alza' : 'a la baja'} (${ownGrowth.pct >= 0 ? '+' : ''}${ownGrowth.pct.toFixed(0)}% entre ${ownGrowth.firstYear} y ${ownGrowth.lastYear}${ownGrowth.omitidoDesde ? `; se omiten los años anteriores a ${ownGrowth.omitidoDesde} por datos municipales incompletos` : ''}); ${alza ? 'conviene anticipar mayor demanda de cobertura' : 'el riesgo parece estar cediendo, lo que abre espacio para optimizar reservas destinadas a este mercado'}.`,
+      body: `La incidencia en ${alcance} muestra una tendencia ${alza ? 'al alza' : 'a la baja'} (${ownGrowth.pct >= 0 ? '+' : ''}${ownGrowth.pct.toFixed(0)}% entre ${ownGrowth.firstYear} y ${ownGrowth.lastYear}${ownGrowth.omitidoDesde ? `; se omiten los años anteriores a ${ownGrowth.omitidoDesde} por datos municipales incompletos` : ''}); ${alza ? 'conviene reforzar las acciones de prevención y anticipar mayor presión sobre las corporaciones de seguridad' : 'la incidencia parece ir cediendo, lo que abre espacio para reasignar recursos de prevención a otras zonas o delitos con mayor presión'}.`,
     })
   }
 
