@@ -15,6 +15,16 @@ interface Props {
 }
 
 
+// Base mínima para entrar a un ranking de crecimiento (por tipo o por estado): el año inicial debe tener
+// al menos 100 casos o el 0.5% del total de ese año (lo que sea mayor). Evita "+53,000%" de 1 a 531 casos.
+const BASE_MIN_CASOS = 100
+const BASE_MIN_PCT = 0.005
+
+function conBaseMinima<T extends { total_desde: number }>(rows: T[], totalAnioInicial: number): T[] {
+  const base = Math.max(BASE_MIN_CASOS, totalAnioInicial * BASE_MIN_PCT)
+  return rows.filter((g) => g.total_desde >= base)
+}
+
 function seasonalityPeak(trend: CrimeSummary['trend']) {
   const totals = new Array(12).fill(0)
   const counts = new Array(12).fill(0)
@@ -161,13 +171,18 @@ export function Insights({ summary: rawSummary, filters, coverage, anioMin }: Pr
   const prevDesde = anioDesde - span
   const enAlcance = coverageInScope(coverage, filters.entidad)
   const excluidos = filters.entidad ? [] : enAlcance.filter((c) => excluyeCrecimiento(c, anioDesde, anioHasta))
-  const summary: CrimeSummary =
-    excluidos.length > 0
-      ? {
-          ...rawSummary,
-          entidad_growth: rawSummary.entidad_growth.filter((g) => !excluidos.some((c) => c.entidad === g.entidad)),
-        }
-      : rawSummary
+  // Total del año inicial del alcance activo (misma base que tipo_growth y entidad_growth)
+  const totalAnioInicial = rawSummary.trend.filter((p) => p.anio === anioDesde).reduce((a, p) => a + p.total, 0)
+  const summary: CrimeSummary = {
+    ...rawSummary,
+    tipo_growth: conBaseMinima(rawSummary.tipo_growth, totalAnioInicial),
+    entidad_growth: conBaseMinima(
+      excluidos.length > 0
+        ? rawSummary.entidad_growth.filter((g) => !excluidos.some((c) => c.entidad === g.entidad))
+        : rawSummary.entidad_growth,
+      totalAnioInicial,
+    ),
+  }
   // Notas: crecimiento por tipo (extremos del rango), variación vs periodo anterior (rango + anterior)
   // y tasa por 100k (promedio del rango: un año anómalo la distorsiona y con ella el lugar en el ranking)
   const afectaTipo = enAlcance.some((c) => tocaExtremos(c, anioDesde, anioHasta))
@@ -201,27 +216,17 @@ export function Insights({ summary: rawSummary, filters, coverage, anioMin }: Pr
     <div className="insights-card">
       <h3>Interpretación y conclusiones</h3>
       <ul className="insights-list">
-        <li>
-          {topGrowthTipo ? (
-            <>
-              <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de <strong>{fmtNumber(topGrowthTipo.total_desde)}</strong> a <strong>{fmtNumber(topGrowthTipo.total_hasta)}</strong> casos (<strong>{topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%</strong>).
-            </>
-          ) : (
-            'No se identificó un crecimiento sostenido por tipo de delito en el rango seleccionado.'
-          )}
-        </li>
+        {topGrowthTipo && (
+          <li>
+            <strong>{topGrowthTipo.tipo_delito}</strong> es el delito con mayor crecimiento entre {filters.anioDesde} y {filters.anioHasta}: pasó de <strong>{fmtNumber(topGrowthTipo.total_desde)}</strong> a <strong>{fmtNumber(topGrowthTipo.total_hasta)}</strong> casos (<strong>{topGrowthTipo.growth_pct! >= 0 ? '+' : ''}{topGrowthTipo.growth_pct}%</strong>).
+          </li>
+        )}
         <li>
           Se observa estacionalidad: cada año, <strong>{peakMonth.toLowerCase()}</strong> concentra en promedio <strong>{liftPct.toFixed(0)}%</strong> más casos que el resto del año (patrón histórico {filters.anioDesde}-{filters.anioHasta}, se repite todos los años, no un pico puntual ya ocurrido).
         </li>
-        {!filters.entidad && (
+        {!filters.entidad && topGrowthEntidad && (
           <li>
-            {topGrowthEntidad ? (
-              <>
-                <strong>{topGrowthEntidad.entidad}</strong> es el estado que más incrementó su incidencia delictiva (<strong>{topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}{topGrowthEntidad.growth_pct}%</strong>), de <strong>{fmtNumber(topGrowthEntidad.total_desde)}</strong> a <strong>{fmtNumber(topGrowthEntidad.total_hasta)}</strong> casos.
-              </>
-            ) : (
-              'No se identificó un incremento sostenido por estado en el rango seleccionado.'
-            )}
+            <strong>{topGrowthEntidad.entidad}</strong> es el estado que más incrementó su incidencia delictiva (<strong>{topGrowthEntidad.growth_pct! >= 0 ? '+' : ''}{topGrowthEntidad.growth_pct}%</strong>), de <strong>{fmtNumber(topGrowthEntidad.total_desde)}</strong> a <strong>{fmtNumber(topGrowthEntidad.total_hasta)}</strong> casos.
           </li>
         )}
         {!filters.entidad && topTasaEntidad && (
