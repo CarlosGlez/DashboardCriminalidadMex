@@ -3,10 +3,13 @@ import './App.css'
 import { useFilterOptions } from './hooks/useFilterOptions'
 import { useCrimeSummary } from './hooks/useCrimeSummary'
 import { useMapMunicipios } from './hooks/useMapMunicipios'
+import { useMunicipiosAnio } from './hooks/useMunicipiosAnio'
 import { useCoverage } from './hooks/useCoverage'
 import { FilterBar } from './components/FilterBar'
 import { KpiCards } from './components/KpiCards'
-import { TrendChart } from './components/TrendChart'
+import { AnalysisContext } from './components/AnalysisContext'
+import { MunicipiosComparativa } from './components/MunicipiosComparativa'
+import { TipoPieChart } from './components/TipoPieChart'
 import { RankingBarChart } from './components/RankingBarChart'
 import { RankingTable } from './components/RankingTable'
 import { YearComparisonChart } from './components/YearComparisonChart'
@@ -18,17 +21,19 @@ import type { CrimeSummary, Filters } from './types'
 const ChoroplethMap = lazy(() => import('./components/ChoroplethMap').then((m) => ({ default: m.ChoroplethMap })))
 
 const TOP_TIPOS = 10
+const TOP_TIPOS_PIE = 6
 const OTROS = 'Otros'
 
-// Top 10 tipos de delito; el resto se agrupa en una sola barra "Otros".
-function topConOtros(tipos: { tipo_delito?: string | null; total: number }[]) {
+// Top N tipos de delito; el resto se agrupa en una sola barra/rebanada "Otros".
+function topConOtros(tipos: { tipo_delito?: string | null; total: number }[], n = TOP_TIPOS) {
   const sorted = [...tipos].sort((a, b) => b.total - a.total)
-  const rows = sorted.slice(0, TOP_TIPOS).map((t) => ({ label: t.tipo_delito ?? '', value: t.total }))
-  const resto = sorted.slice(TOP_TIPOS).reduce((acc, t) => acc + t.total, 0)
+  const rows = sorted.slice(0, n).map((t) => ({ label: t.tipo_delito ?? '', value: t.total }))
+  const resto = sorted.slice(n).reduce((acc, t) => acc + t.total, 0)
   return resto > 0 ? [...rows, { label: OTROS, value: resto }] : rows
 }
 
-// Delitos por estado (ancho completo, solo sin estado elegido); debajo, tipo y municipios lado a lado.
+// Delitos por estado (ancho completo, solo sin estado elegido); debajo, barras y pastel por tipo lado a lado.
+// El top de municipios del país va en su propia fila (con estado elegido lo cubre la tabla comparativa).
 function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: Filters }) {
   const tipoChart = (
     <RankingBarChart
@@ -66,25 +71,26 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
     />
   )
 
+  const pieChart = (
+    <TipoPieChart title="Delitos por tipo (% del total)" rows={topConOtros(summary.by_tipo, TOP_TIPOS_PIE)} mutedLabel={OTROS} />
+  )
+
   const municipiosChart =
-    !filters.municipio && summary.by_municipio.length > 0 ? (
+    !filters.entidad && !filters.municipio && summary.by_municipio.length > 0 ? (
       <RankingTable
-        title={filters.entidad ? `Top municipios de ${filters.entidad}` : 'Top 15 municipios del país'}
-        rows={summary.by_municipio.map((m) => ({
-          name: m.municipio,
-          sub: filters.entidad ? undefined : m.entidad,
-          value: m.total,
-        }))}
+        title="Top 15 municipios del país"
+        rows={summary.by_municipio.map((m) => ({ name: m.municipio, sub: m.entidad, value: m.total }))}
       />
     ) : null
 
   return (
     <>
       {!filters.entidad && <div className="chart-grid chart-grid--single">{estadoChart}</div>}
-      <div className={municipiosChart ? 'chart-grid' : 'chart-grid chart-grid--single'}>
+      <div className="chart-grid">
         {tipoChart}
-        {municipiosChart}
+        {pieChart}
       </div>
+      {municipiosChart && <div className="chart-grid chart-grid--single">{municipiosChart}</div>}
     </>
   )
 }
@@ -112,6 +118,8 @@ function App() {
 
   // Totales de todos los municipios del estado elegido; se pide en paralelo a crime_summary
   const mapData = useMapMunicipios(filters)
+  // Total por año de todos los municipios del estado: alimenta la tabla y la gráfica municipal
+  const munAnio = useMunicipiosAnio(filters)
   // Estados/años con desglose municipal incompleto (avisos y exclusiones en mapa, KPIs e Insights)
   const coverage = useCoverage()
 
@@ -134,6 +142,8 @@ function App() {
 
       <FilterBar options={options} filters={filters} onChange={setFilters} />
 
+      <AnalysisContext filters={filters} />
+
       {error && <div className="state-message state-message--error">Error cargando datos: {error}</div>}
 
       {loading && !summary && <div className="state-message">Cargando datos...</div>}
@@ -149,12 +159,22 @@ function App() {
           </div>
 
           <div className="chart-grid chart-grid--single">
-            <TrendChart trend={summary.trend} />
+            <YearComparisonChart trend={summary.trend} filters={filters} coverage={coverage} />
           </div>
 
-          <div className="chart-grid chart-grid--single">
-            <YearComparisonChart trend={summary.trend} />
-          </div>
+          {filters.entidad ? (
+            <MunicipiosComparativa
+              filters={filters}
+              coverage={coverage}
+              rows={munAnio.rows}
+              loading={munAnio.loading}
+              error={munAnio.error}
+            />
+          ) : (
+            <div className="chart-grid chart-grid--single">
+              <MunicipiosComparativa filters={filters} coverage={coverage} rows={null} loading={false} error={null} />
+            </div>
+          )}
 
           <RankingCharts summary={summary} filters={filters} />
 

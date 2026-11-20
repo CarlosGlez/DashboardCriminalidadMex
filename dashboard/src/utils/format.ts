@@ -73,3 +73,21 @@ export function fmtLegend(v: number): string {
   if (abs >= 1_000) return `${(r / 1_000).toLocaleString('es-MX', { maximumFractionDigits: abs < 10_000 ? 1 : 0 })}k`
   return fmtNumber(r)
 }
+
+/** Diferencia con signo: +1,234 / −567 / 0 (signo menos tipográfico). */
+export function fmtSigned(v: number): string {
+  if (v === 0) return '0'
+  return `${v > 0 ? '+' : '−'}${fmtNumber(Math.abs(v))}`
+}
+
+/** Porcentaje de cambio con signo y 1 decimal: +12.3% / −4.5%; "—" si no está definido (base 0). */
+export function fmtPctChange(v: number | null): string {
+  if (v === null || !Number.isFinite(v)) return '—'
+  if (v === 0) return '0.0%'
+  return `${v > 0 ? '+' : '−'}${Math.abs(v).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+}
+
+/** % de cambio de `base` a `actual`; null si la base es 0 (sería infinito). */
+export function pctChange(base: number, actual: number): number | null {
+  return base > 0 ? ((actual - base) / base) * 100 : null
+}

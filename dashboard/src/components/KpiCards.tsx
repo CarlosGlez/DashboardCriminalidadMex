@@ -2,6 +2,7 @@ import { fmtNumber, fmtDecimal } from '../utils/format'
 import type { CrimeSummary, Filters } from '../types'
 import { aniosAnomalosEn, coverageInScope, describir } from '../utils/coverage'
 import type { CoverageMap } from '../utils/coverage'
+import { WarnTip } from './WarnTip'
 
 interface Props {
   summary: CrimeSummary
@@ -11,15 +12,6 @@ interface Props {
   anioMin: number
 }
 
-
-function WarnTip({ text }: { text: string }) {
-  return (
-    <span className="warn-tip" tabIndex={0} role="img" aria-label={`Advertencia: ${text}`}>
-      <span aria-hidden="true">⚠</span>
-      <span className="warn-tip-text" role="tooltip">{text}</span>
-    </span>
-  )
-}
 
 export function KpiCards({ summary, filters, coverage, anioMin }: Props) {
   const span = filters.anioHasta - filters.anioDesde + 1

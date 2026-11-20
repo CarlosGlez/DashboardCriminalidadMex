@@ -35,6 +35,15 @@ export interface MapMunicipioRow {
   total: number
 }
 
+// Fila de la RPC municipios_anio (supabase/09_municipios_anio.sql): total de un municipio del
+// estado elegido en un año. Incluye las claves 998/999.
+export interface MunicipioAnioRow {
+  cve_mun: number
+  municipio: string
+  anio: number
+  total: number
+}
+
 // Fila de la RPC data_coverage (supabase/08_coverage.sql): estados con años anómalos
 // (incompletos o con cambios bruscos de reporte). Los estados sin años anómalos no aparecen.
 //  - 'arranque':  los años anómalos son un bloque pegado al primer año (tiene anio_completo_desde)
