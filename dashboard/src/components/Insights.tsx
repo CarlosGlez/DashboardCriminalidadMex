@@ -148,7 +148,7 @@ function buildActionPlan(
     const alza = ownGrowth.pct > 0
     secondary.push({
       title: 'Tendencia a vigilar',
-      body: `La incidencia en ${alcance} muestra una tendencia ${alza ? 'al alza' : 'a la baja'} (${ownGrowth.pct >= 0 ? '+' : ''}${ownGrowth.pct.toFixed(0)}% entre ${ownGrowth.firstYear} y ${ownGrowth.lastYear}${ownGrowth.omitidoDesde ? `; se omiten los años anteriores a ${ownGrowth.omitidoDesde} por datos municipales incompletos` : ''}); ${alza ? 'conviene reforzar las acciones de prevención y anticipar mayor presión sobre las corporaciones de seguridad' : 'la incidencia parece ir cediendo, lo que abre espacio para reasignar recursos de prevención a otras zonas o delitos con mayor presión'}.`,
+      body: `La incidencia en ${alcance} muestra una tendencia ${alza ? 'al alza' : 'a la baja'} (${ownGrowth.pct >= 0 ? '+' : ''}${ownGrowth.pct.toFixed(0)}% entre ${ownGrowth.firstYear} y ${ownGrowth.lastYear}${ownGrowth.omitidoDesde ? `; se omiten los años anteriores a ${ownGrowth.omitidoDesde} por datos municipales incompletos` : ''})${alza ? '; conviene reforzar las acciones de prevención y anticipar mayor presión sobre las corporaciones de seguridad' : ', y parece ir cediendo, lo que abre espacio para reasignar recursos de prevención a otras zonas o delitos con mayor presión'}.`,
     })
   }
 
