@@ -86,9 +86,10 @@ function RankingCharts({ summary, filters }: { summary: CrimeSummary; filters: F
   return (
     <>
       {!filters.entidad && <div className="chart-grid chart-grid--single">{estadoChart}</div>}
-      <div className="chart-grid">
+      {/* Con un tipo elegido la dona sería "X 100%": se oculta y la barra queda a ancho completo */}
+      <div className={filters.tipoDelito ? 'chart-grid chart-grid--single' : 'chart-grid'}>
         {tipoChart}
-        {pieChart}
+        {!filters.tipoDelito && pieChart}
       </div>
       {municipiosChart && <div className="chart-grid chart-grid--single">{municipiosChart}</div>}
     </>
