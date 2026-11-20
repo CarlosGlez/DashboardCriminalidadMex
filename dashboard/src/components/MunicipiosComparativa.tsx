@@ -95,7 +95,8 @@ export function MunicipiosComparativa({ filters, coverage, rows, loading, error 
   const extremosAtipicos = coverageInScope(coverage, entidad)
     .flatMap((c) => [...aniosAnomalosEn(c, anioDesde, anioDesde), ...aniosAnomalosEn(c, anioHasta, anioHasta)])
     .filter((y, i, arr) => arr.indexOf(y) === i)
-  const avisoExtremos = `Ojo: ${formatAnios(extremosAtipicos)} es un año atípico o incompleto en ${entidad}; la diferencia y el % de cambio pueden no ser comparables.`
+  const atipicosPeriodo = coverageInScope(coverage, entidad).flatMap((c) => aniosAnomalosEn(c, anioDesde, anioHasta))
+  const avisoExtremos = `Ojo: ${formatAnios(extremosAtipicos)} es un año atípico o incompleto en ${entidad} (años atípicos en el periodo: ${formatAnios(atipicosPeriodo)}); la diferencia y el % de cambio pueden no ser comparables.`
 
   const th = (key: SortKey, label: string, num = true) => (
     <th scope="col" aria-sort={ariaSort(key)} className={num ? 'mt-num' : undefined}>

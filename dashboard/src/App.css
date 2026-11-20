@@ -1030,3 +1030,12 @@
   margin-left: auto;
   padding-left: 8px;
 }
+
+/* Los hijos del grid pueden encogerse (la tabla desplaza dentro de su contenedor) */
+.chart-grid > * {
+  min-width: 0;
+}
+
+.chart-card {
+  min-width: 0;
+}
